@@ -16,6 +16,8 @@ const dailyMessages = [
   "This one deserves a second look."
 ];
 
+let activeMediaCardId = null;
+
 function getDailyMessage() {
   const today = new Date().toDateString();
   const index = today
@@ -62,6 +64,25 @@ function showConfirm(message) {
       modal.remove();
       resolve(true);
     };
+  });
+}
+
+function setActiveMediaCard(mediaId) {
+  activeMediaCardId = activeMediaCardId === mediaId ? null : mediaId;
+
+  document.querySelectorAll('[data-media-card]').forEach(card => {
+    const isActive = card.dataset.mediaId === activeMediaCardId;
+    const overlay = card.querySelector('[data-media-overlay]');
+    const deleteButton = card.querySelector('[data-delete-button]');
+
+    if (overlay) {
+      overlay.classList.toggle('opacity-100', isActive);
+      overlay.classList.toggle('bg-black/40', isActive);
+    }
+
+    if (deleteButton) {
+      deleteButton.classList.toggle('opacity-100', isActive);
+    }
   });
 }
 
@@ -175,24 +196,34 @@ async function loadGallery() {
       return;
     }
 
+    activeMediaCardId = null;
     container.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
 
     container.innerHTML = data.slice().reverse().map(item => `
-      <div class="relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group bg-white border border-[#E8DED2]">
+      <div
+        data-media-card
+        data-media-id="${item.id}"
+        onclick='setActiveMediaCard(${JSON.stringify(item.id)})'
+        class="relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group bg-white border border-[#E8DED2] cursor-pointer"
+      >
         ${item.type === 'image'
           ? `<img src="${item.url}" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">`
           : `<video src="${item.url}" class="w-full h-64 object-cover"></video>`
         }
 
         <button
-          onclick='deleteMedia(${JSON.stringify(item.id)})'
+          data-delete-button
+          onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
           class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition"
         >
           Delete
         </button>
 
-        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-end p-4 pointer-events-none">
-          <div class="opacity-0 group-hover:opacity-100 transition-all text-white">
+        <div
+          data-media-overlay
+          class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-end p-4 pointer-events-none opacity-0 group-hover:opacity-100"
+        >
+          <div class="text-white">
             <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
             <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
             <p class="text-xs text-gray-200">Uploaded by ${item.uploadedByName || item.uploadedBy || 'Unknown'}</p>
@@ -218,7 +249,18 @@ window.deleteMedia = async function(mediaId) {
 
     if (res.ok) {
       showToast('Media deleted', 'success');
-      loadGallery();
+
+      if (document.getElementById('gallery')) {
+        loadGallery();
+      }
+
+      if (document.getElementById('userUploads')) {
+        loadUserUploads();
+      }
+
+      if (document.getElementById('totalCount')) {
+        loadHomePage();
+      }
     } else {
       const data = await res.json().catch(() => ({}));
       showToast(data.error || 'Delete failed', 'error');
@@ -306,14 +348,40 @@ async function loadUserUploads() {
       return;
     }
 
+    activeMediaCardId = null;
+
     container.innerHTML = userItems.map(item => `
-      <div class="bg-white rounded-2xl overflow-hidden border border-[#E8DED2] shadow-sm">
+      <div
+        data-media-card
+        data-media-id="${item.id}"
+        onclick='setActiveMediaCard(${JSON.stringify(item.id)})'
+        class="relative bg-white rounded-2xl overflow-hidden border border-[#E8DED2] shadow-sm cursor-pointer group"
+      >
         <div class="aspect-square overflow-hidden">
           ${item.type === 'image'
             ? `<img src="${item.url}" class="w-full h-full object-cover">`
             : `<video src="${item.url}" class="w-full h-full object-cover"></video>`
           }
         </div>
+
+        <button
+          data-delete-button
+          onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
+          class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition"
+        >
+          Delete
+        </button>
+
+        <div
+          data-media-overlay
+          class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-end p-4 pointer-events-none opacity-0 group-hover:opacity-100"
+        >
+          <div class="text-white">
+            <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
+            <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
+          </div>
+        </div>
+
         <div class="p-3">
           <p class="text-sm font-medium truncate">${item.title || 'Untitled'}</p>
           <p class="text-xs text-gray-500">${formatDate(item.uploadedAt)}</p>
