@@ -25,6 +25,46 @@ function getDailyMessage() {
   return dailyMessages[index];
 }
 
+async function getCurrentUser() {
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+    return data.loggedIn && data.user ? data.user : null;
+  } catch (err) {
+    console.error('Failed to get current user:', err);
+    return null;
+  }
+}
+
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl p-6 w-80 text-center shadow-lg">
+        <p class="mb-6 text-sm text-[#1F2933]">${message}</p>
+        <div class="flex justify-center gap-4">
+          <button id="confirmCancel" class="px-4 py-2 border rounded-lg">Cancel</button>
+          <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded-lg">Delete</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#confirmCancel').onclick = () => {
+      modal.remove();
+      resolve(false);
+    };
+
+    modal.querySelector('#confirmOk').onclick = () => {
+      modal.remove();
+      resolve(true);
+    };
+  });
+}
+
 // ===== UPLOAD PAGE =====
 function initializeUpload() {
   const dropZone = document.getElementById('dropZone');
@@ -128,9 +168,7 @@ async function loadGallery() {
     const res = await fetch('/api/media');
     const data = await res.json();
 
-    if (photoCount) {
-      photoCount.textContent = `${data.length} media`;
-    }
+    if (photoCount) photoCount.textContent = `${data.length} media`;
 
     if (data.length === 0) {
       container.innerHTML = '<p class="text-center text-gray-500">No media yet</p>';
@@ -157,6 +195,7 @@ async function loadGallery() {
           <div class="opacity-0 group-hover:opacity-100 transition-all text-white">
             <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
             <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
+            <p class="text-xs text-gray-200">Uploaded by ${item.uploadedByName || item.uploadedBy || 'Unknown'}</p>
           </div>
         </div>
       </div>
@@ -164,14 +203,13 @@ async function loadGallery() {
 
   } catch (e) {
     console.error(e);
-    if (photoCount) {
-      photoCount.textContent = 'Error loading media';
-    }
+    if (photoCount) photoCount.textContent = 'Error loading media';
   }
 }
 
 window.deleteMedia = async function(mediaId) {
-  if (!confirm('Delete this media item?')) return;
+  const confirmed = await showConfirm('Delete this media item?');
+  if (!confirmed) return;
 
   try {
     const res = await fetch(`/api/media/${mediaId}`, {
@@ -209,10 +247,7 @@ async function loadHomePage() {
     if (totalCount) totalCount.textContent = data.length;
     if (albumCount) albumCount.textContent = albums.length;
     if (recentCount) recentCount.textContent = recentItems.length;
-
-    if (dailyMessage) {
-      dailyMessage.textContent = getDailyMessage();
-    }
+    if (dailyMessage) dailyMessage.textContent = getDailyMessage();
 
     if (!recentPhotos) return;
 
@@ -247,18 +282,24 @@ async function loadUserUploads() {
   const uploadStats = document.getElementById('uploadStats');
 
   try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      if (uploadStats) uploadStats.textContent = 'Not logged in';
+      container.innerHTML = '<p class="text-gray-500 col-span-full">Please log in.</p>';
+      return;
+    }
+
     const res = await fetch('/api/media');
     const data = await res.json();
 
     const userItems = data
-      .filter(item => item.uploadedBy === 'Current User')
+      .filter(item => item.uploadedBy === currentUser.username)
       .slice()
       .reverse()
       .slice(0, 6);
 
-    if (uploadStats) {
-      uploadStats.textContent = `${userItems.length} uploads`;
-    }
+    if (uploadStats) uploadStats.textContent = `${userItems.length} uploads`;
 
     if (userItems.length === 0) {
       container.innerHTML = '<p class="text-gray-500 col-span-full">No uploads yet.</p>';
@@ -282,10 +323,7 @@ async function loadUserUploads() {
 
   } catch (e) {
     console.error(e);
-
-    if (uploadStats) {
-      uploadStats.textContent = 'Error loading uploads';
-    }
+    if (uploadStats) uploadStats.textContent = 'Error loading uploads';
   }
 }
 
@@ -301,14 +339,15 @@ function showToast(message, type = 'success') {
   const iconColor = type === 'success' ? 'bg-[#C76B4A]' : 'bg-red-500';
 
   toast.className = `
-    fixed bottom-6 right-6 z-50
+    fixed top-6 left-1/2 -translate-x-1/2 z-50
     bg-white border border-[#E8DED2]
     shadow-lg rounded-xl px-5 py-4
     text-sm text-[#1F2933]
+    min-w-[260px] text-center
   `;
 
   toast.innerHTML = `
-    <div class="flex items-center gap-3">
+    <div class="flex items-center justify-center gap-3">
       <div class="w-6 h-6 ${iconColor} text-white rounded-full flex items-center justify-center text-xs font-semibold">
         ${icon}
       </div>
