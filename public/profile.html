@@ -9,25 +9,22 @@
 
 <body class="bg-[#FAF7F2] text-[#1F2933]">
 
-<header class="bg-white/80 backdrop-blur border-b border-[#E8DED2] sticky top-0 z-10">
-  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+<header class="bg-white border-b border-[#E8DED2]">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
 
     <a href="index.html" class="flex items-center gap-3">
-      <div class="w-11 h-11 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white text-xl">
+      <div class="w-10 h-10 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white">
         📷
       </div>
-      <div>
-        <h1 class="text-lg font-semibold">Fam Media</h1>
-        <p class="text-xs text-gray-500">Capture what matters</p>
-      </div>
+      <h1 class="text-lg font-semibold">Fam Media</h1>
     </a>
 
-    <nav class="flex gap-2 text-sm items-center">
-      <a href="index.html">Home</a>
-      <a href="upload.html">Upload</a>
-      <a href="gallery.html">Gallery</a>
+    <nav class="flex items-center gap-3 text-sm">
+      <a href="index.html" class="hover:text-[#C76B4A]">Home</a>
+      <a href="upload.html" class="hover:text-[#C76B4A]">Upload</a>
+      <a href="gallery.html" class="hover:text-[#C76B4A]">Gallery</a>
       <a href="profile.html" class="text-[#C76B4A] font-semibold">Profile</a>
-      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
+      <button onclick="logout()" class="text-red-500 hover:text-red-600 ml-2">Logout</button>
     </nav>
 
   </div>
@@ -35,8 +32,8 @@
 
 <main class="max-w-6xl mx-auto px-4 py-10">
 
-  <div class="bg-white rounded-3xl shadow-sm border border-[#E8DED2] p-8 mb-8 flex items-center gap-6">
-    <div class="w-20 h-20 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-3xl">
+  <div class="bg-white rounded-xl shadow-sm border border-[#E8DED2] p-6 mb-8 flex items-center gap-5">
+    <div class="w-16 h-16 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-2xl">
       👤
     </div>
     <div>
@@ -47,16 +44,16 @@
 
   <div class="grid lg:grid-cols-3 gap-8">
 
-    <div class="bg-white rounded-2xl border border-[#E8DED2] p-4 h-fit">
+    <div class="bg-white rounded-xl border border-[#E8DED2] p-4 h-fit shadow-sm">
       <nav class="space-y-2">
 
         <button onclick="showTab('uploads')" id="tabUploads"
-          class="w-full text-left px-4 py-3 rounded-xl bg-[#C76B4A] text-white">
+          class="w-full text-left px-4 py-2.5 rounded-lg bg-[#C76B4A] text-white">
           My Uploads
         </button>
 
         <button onclick="showTab('settings')" id="tabSettings"
-          class="w-full text-left px-4 py-3 rounded-xl hover:bg-[#F2EAE3] text-gray-700">
+          class="w-full text-left px-4 py-2.5 rounded-lg hover:bg-[#F2EAE3] text-gray-700">
           Settings
         </button>
 
@@ -75,7 +72,10 @@
       </div>
 
       <div id="contentSettings" class="tab-content hidden">
-        <h1 class="text-2xl font-semibold mb-6">Settings</h1>
+        <div class="bg-white border border-[#E8DED2] rounded-xl p-6 shadow-sm">
+          <h1 class="text-2xl font-semibold mb-2">Settings</h1>
+          <p class="text-sm text-gray-500">Settings will be added later.</p>
+        </div>
       </div>
 
     </div>
@@ -111,13 +111,14 @@ function showTab(tab) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
   document.getElementById('content' + capitalize(tab)).classList.remove('hidden');
 
-  document.querySelectorAll('nav button').forEach(btn => {
+  document.querySelectorAll('#tabUploads, #tabSettings').forEach(btn => {
     btn.classList.remove('bg-[#C76B4A]', 'text-white');
     btn.classList.add('text-gray-700');
   });
 
   const active = document.getElementById('tab' + capitalize(tab));
   active.classList.add('bg-[#C76B4A]', 'text-white');
+  active.classList.remove('text-gray-700');
 }
 
 function capitalize(s) {
