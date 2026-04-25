@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fam Media</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#FAF7F2] text-[#1F2933]">
+
+<header class="bg-white border-b border-[#E8DED2]">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white">📷</div>
+      <h1 class="text-lg font-semibold">Fam Media</h1>
+    </div>
+
+    <nav class="flex items-center gap-3 text-sm">
+      <a href="index.html" class="text-[#C76B4A] font-semibold">Home</a>
+      <a href="upload.html">Upload</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="profile.html">Profile</a>
+      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
+    </nav>
+
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-10">
+
+  <!-- HERO -->
+  <section class="mb-10 text-center">
+
+    <h2 class="text-2xl font-semibold mb-4">
+      Share if you want. Keep it if you don’t.
+    </h2>
+
+    <div class="flex justify-center gap-4">
+      <a href="upload.html" class="px-5 py-2 bg-[#C76B4A] text-white rounded-lg">Upload</a>
+      <a href="gallery.html" class="px-5 py-2 bg-[#8FA996] text-white rounded-lg">Gallery</a>
+    </div>
+
+  </section>
+
+  <!-- STATS -->
+  <section class="grid grid-cols-3 gap-4 mb-10 text-center">
+
+    <div class="bg-white p-4 rounded-lg border border-[#E8DED2]">
+      <p class="text-xs text-gray-500">Total</p>
+      <p id="totalCount" class="text-xl font-semibold">0</p>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg border border-[#E8DED2]">
+      <p class="text-xs text-gray-500">Albums</p>
+      <p id="albumCount" class="text-xl font-semibold">0</p>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg border border-[#E8DED2]">
+      <p class="text-xs text-gray-500">Recent</p>
+      <p id="recentCount" class="text-xl font-semibold">0</p>
+    </div>
+
+  </section>
+
+  <!-- RECENT -->
+  <section>
+
+    <h3 class="text-lg font-semibold mb-4">Recent Media</h3>
+
+    <div id="recentPhotos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+
+  </section>
+
+</main>
+
+<!-- FLOATING GRANDPA NOTE -->
+<div class="fixed bottom-5 left-5 z-40 hidden md:flex items-center gap-3 bg-white border border-[#E8DED2] rounded-xl shadow-lg p-3 max-w-xs">
+
+  <img
+    src="/images/grandpa.png"
+    alt="Fam Media Grandpa"
+    class="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+  >
+
+  <div>
+    <p id="dailyMessage" class="text-xs leading-snug text-[#1F2933] font-medium">
+      Loading...
+    </p>
+  </div>
+
+</div>
+
+<script src="auth.js"></script>
+<script>
+  requireAuth();
+</script>
+<script src="scripts.js"></script>
+
+</body>
+</html>

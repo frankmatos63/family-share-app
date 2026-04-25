@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload - Fam Media</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#FAF7F2] text-[#1F2933]">
+
+<header class="bg-white/80 backdrop-blur border-b border-[#E8DED2] sticky top-0 z-10">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+
+    <a href="index.html" class="flex items-center gap-3">
+      <div class="w-11 h-11 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white text-xl">
+        📷
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold">Fam Media</h1>
+        <p class="text-xs text-gray-500">Capture what matters</p>
+      </div>
+    </a>
+
+    <nav class="flex gap-2 text-sm items-center">
+      <a href="index.html" class="px-4 py-2 rounded-xl hover:bg-[#F2EAE3]">Home</a>
+      <a href="upload.html" class="px-4 py-2 rounded-xl bg-[#C76B4A] text-white">Upload</a>
+      <a href="gallery.html" class="px-4 py-2 rounded-xl hover:bg-[#F2EAE3]">Gallery</a>
+      <a href="profile.html" class="px-4 py-2 rounded-xl hover:bg-[#F2EAE3]">Profile</a>
+      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
+    </nav>
+
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-10">
+
+  <div class="mb-8">
+    <h1 class="text-3xl font-semibold mb-2">Upload Media</h1>
+    <p class="text-gray-500">Add photos or videos to Fam Media</p>
+  </div>
+
+  <form id="uploadForm" class="space-y-6">
+
+    <div id="dropZone" class="border border-dashed border-[#E8DED2] rounded-2xl p-10 text-center bg-white hover:border-[#C76B4A] transition-all">
+
+      <div class="w-16 h-16 mx-auto mb-4 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-2xl">
+        ↑
+      </div>
+
+      <p class="text-lg mb-2">Drag & drop files here</p>
+      <p class="text-sm text-gray-500 mb-6">or select manually</p>
+
+      <label class="inline-block px-6 py-2 bg-[#C76B4A] text-white rounded-xl cursor-pointer hover:opacity-90">
+        Browse Files
+        <input type="file" id="fileUpload" multiple accept="image/*,video/*" class="hidden">
+      </label>
+
+    </div>
+
+    <div id="selectedFilesContainer" class="hidden">
+      <div class="bg-white border border-[#E8DED2] rounded-xl p-4">
+        <h3 class="text-sm text-gray-500 mb-3">Selected Files</h3>
+        <div id="fileList" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-500 mb-2 block">Title</label>
+      <input
+        type="text"
+        id="title"
+        placeholder="Optional title"
+        class="w-full px-4 py-2 border border-[#E8DED2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+      >
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-500 mb-2 block">Description</label>
+      <textarea
+        id="description"
+        rows="4"
+        placeholder="Optional description"
+        class="w-full px-4 py-2 border border-[#E8DED2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+      ></textarea>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-500 mb-2 block">Album</label>
+      <select
+        id="album"
+        class="w-full px-4 py-2 border border-[#E8DED2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+      >
+        <option>Fam Media</option>
+        <option>Vacations</option>
+        <option>Holidays</option>
+        <option>Special Events</option>
+        <option>Kids</option>
+      </select>
+    </div>
+
+    <div class="flex gap-4 pt-4">
+      <button
+        id="uploadButton"
+        type="submit"
+        class="flex-1 px-6 py-3 bg-[#C76B4A] text-white rounded-xl hover:opacity-90"
+      >
+        Upload
+      </button>
+
+      <a
+        href="index.html"
+        class="px-6 py-3 border border-[#E8DED2] rounded-xl hover:bg-[#F2EAE3]"
+      >
+        Cancel
+      </a>
+    </div>
+
+  </form>
+
+</main>
+
+<script src="auth.js"></script>
+<script>
+  requireAuth();
+</script>
+<script src="scripts.js"></script>
+
+</body>
+</html>

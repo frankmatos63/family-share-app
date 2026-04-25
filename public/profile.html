@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Fam Media</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#FAF7F2] text-[#1F2933]">
+
+<header class="bg-white/80 backdrop-blur border-b border-[#E8DED2] sticky top-0 z-10">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+
+    <a href="index.html" class="flex items-center gap-3">
+      <div class="w-11 h-11 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white text-xl">
+        📷
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold">Fam Media</h1>
+        <p class="text-xs text-gray-500">Capture what matters</p>
+      </div>
+    </a>
+
+    <nav class="flex gap-2 text-sm items-center">
+      <a href="index.html" class="px-4 py-2 rounded-xl hover:bg-[#F2EAE3]">Home</a>
+      <a href="upload.html" class="px-4 py-2 rounded-xl hover:bg-[#F2EAE3]">Upload</a>
+      <a href="gallery.html" class="px-4 py-2 rounded-xl hover:bg-[#F2EAE3]">Gallery</a>
+      <a href="profile.html" class="px-4 py-2 rounded-xl bg-[#C76B4A] text-white">Profile</a>
+      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
+    </nav>
+
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-10">
+
+  <div class="bg-white rounded-3xl shadow-sm border border-[#E8DED2] p-8 mb-8 flex items-center gap-6">
+    <div class="w-20 h-20 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-3xl">
+      👤
+    </div>
+    <div>
+      <h2 class="text-2xl font-semibold">Current User</h2>
+      <p class="text-gray-500 text-sm">Fam Media</p>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-8">
+
+    <div class="bg-white rounded-2xl border border-[#E8DED2] p-4 h-fit">
+      <nav class="space-y-2">
+
+        <button onclick="showTab('uploads')" id="tabUploads"
+          class="w-full text-left px-4 py-3 rounded-xl bg-[#C76B4A] text-white">
+          My Uploads
+        </button>
+
+        <button onclick="showTab('settings')" id="tabSettings"
+          class="w-full text-left px-4 py-3 rounded-xl hover:bg-[#F2EAE3] text-gray-700">
+          Settings
+        </button>
+
+      </nav>
+    </div>
+
+    <div class="lg:col-span-2">
+
+      <div id="contentUploads" class="tab-content">
+        <div class="mb-6">
+          <h1 class="text-2xl font-semibold">My Uploads</h1>
+          <p class="text-sm text-gray-500" id="uploadStats">Loading...</p>
+        </div>
+
+        <div id="userUploads" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+      </div>
+
+      <div id="contentSettings" class="tab-content hidden">
+
+        <h1 class="text-2xl font-semibold mb-6">Settings</h1>
+
+        <div class="space-y-6">
+
+          <div class="bg-white border border-[#E8DED2] rounded-2xl p-6 flex justify-between items-center">
+            <div>
+              <h3 class="font-medium">Email Notifications</h3>
+              <p class="text-sm text-gray-500">Get notified of activity</p>
+            </div>
+            <button onclick="toggleSetting(this)" class="w-12 h-6 rounded-full bg-[#C76B4A] relative">
+              <span class="w-4 h-4 bg-white rounded-full absolute top-1 left-6 transition-all"></span>
+            </button>
+          </div>
+
+          <div class="bg-white border border-[#E8DED2] rounded-2xl p-6 flex justify-between items-center">
+            <div>
+              <h3 class="font-medium">Privacy</h3>
+              <p class="text-sm text-gray-500">Visible to family members</p>
+            </div>
+            <button onclick="toggleSetting(this)" class="w-12 h-6 rounded-full bg-gray-300 relative">
+              <span class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-all"></span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+<script src="auth.js"></script>
+<script>
+  requireAuth();
+</script>
+<script src="scripts.js"></script>
+
+<script>
+function showTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.getElementById('content' + capitalize(tab)).classList.remove('hidden');
+
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.classList.remove('bg-[#C76B4A]', 'text-white');
+    btn.classList.add('text-gray-700');
+  });
+
+  const active = document.getElementById('tab' + capitalize(tab));
+  active.classList.add('bg-[#C76B4A]', 'text-white');
+}
+
+function toggleSetting(btn) {
+  const span = btn.querySelector('span');
+
+  if (btn.classList.contains('bg-[#C76B4A]')) {
+    btn.classList.remove('bg-[#C76B4A]');
+    btn.classList.add('bg-gray-300');
+    span.style.left = '4px';
+  } else {
+    btn.classList.remove('bg-gray-300');
+    btn.classList.add('bg-[#C76B4A]');
+    span.style.left = '24px';
+  }
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+</script>
+
+</body>
+</html>
