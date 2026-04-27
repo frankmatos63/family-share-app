@@ -16,6 +16,8 @@ const dailyMessages = [
   "This one deserves a second look."
 ];
 
+const REACTIONS = ['🥰', '🤗', '💪', '👍', '🎈', '❤️', '🎂', '🎉', '👏'];
+
 let activeMediaCardId = null;
 
 function getDailyMessage() {
@@ -71,9 +73,10 @@ function setActiveMediaCard(mediaId) {
   activeMediaCardId = activeMediaCardId === mediaId ? null : mediaId;
 
   document.querySelectorAll('[data-media-card]').forEach(card => {
-    const isActive = card.dataset.mediaId === activeMediaCardId;
+    const isActive = card.dataset.mediaId === String(activeMediaCardId);
     const overlay = card.querySelector('[data-media-overlay]');
     const deleteButton = card.querySelector('[data-delete-button]');
+    const reactions = card.querySelector('[data-reactions]');
 
     if (overlay) {
       overlay.classList.toggle('opacity-100', isActive);
@@ -82,6 +85,12 @@ function setActiveMediaCard(mediaId) {
 
     if (deleteButton) {
       deleteButton.classList.toggle('opacity-100', isActive);
+    }
+
+    if (reactions) {
+      reactions.classList.toggle('opacity-100', isActive);
+      reactions.classList.toggle('translate-y-0', isActive);
+      reactions.classList.toggle('scale-100', isActive);
     }
   });
 }
@@ -186,8 +195,12 @@ async function loadGallery() {
   const photoCount = document.getElementById('photoCount');
 
   try {
+    const currentUser = await getCurrentUser();
+
     const res = await fetch('/api/media');
     const data = await res.json();
+
+    const username = currentUser?.username;
 
     if (photoCount) photoCount.textContent = `${data.length} media`;
 
@@ -199,44 +212,96 @@ async function loadGallery() {
     activeMediaCardId = null;
     container.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
 
-    container.innerHTML = data.slice().reverse().map(item => `
-      <div
-        data-media-card
-        data-media-id="${item.id}"
-        onclick='setActiveMediaCard(${JSON.stringify(item.id)})'
-        class="relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group bg-white border border-[#E8DED2] cursor-pointer"
-      >
-        ${item.type === 'image'
-          ? `<img src="${item.url}" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">`
-          : `<video src="${item.url}" class="w-full h-64 object-cover"></video>`
-        }
+    container.innerHTML = data.slice().reverse().map(item => {
+      const reactionButtons = REACTIONS.map(emoji => {
+        const users = item.reactions?.[emoji] || [];
+        const count = users.length;
+        const isActive = username && users.includes(username);
+        const namesTitle = users.length > 0 ? users.join(', ') : 'No reactions yet';
 
-        <button
-          data-delete-button
-          onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
-          class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition"
-        >
-          Delete
-        </button>
+        return `
+          <button
+            onclick='event.stopPropagation(); reactToMedia(${JSON.stringify(item.id)}, ${JSON.stringify(emoji)})'
+            class="text-sm px-2 py-1 rounded-full border transition-all duration-200 hover:scale-110 active:scale-95 ${
+              isActive
+                ? 'bg-[#C76B4A] text-white border-[#C76B4A] shadow-sm'
+                : 'bg-white text-[#1F2933] border-[#E8DED2] hover:bg-[#FAF7F2]'
+            }"
+            title="${namesTitle}"
+          >
+            ${emoji}${count > 0 ? ` ${count}` : ''}
+          </button>
+        `;
+      }).join('');
 
+      return `
         <div
-          data-media-overlay
-          class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-end p-4 pointer-events-none opacity-0 group-hover:opacity-100"
+          data-media-card
+          data-media-id="${item.id}"
+          onclick='setActiveMediaCard(${JSON.stringify(item.id)})'
+          class="relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group bg-white border border-[#E8DED2] cursor-pointer"
         >
-          <div class="text-white">
-            <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
-            <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
-            <p class="text-xs text-gray-200">Uploaded by ${item.uploadedByName || item.uploadedBy || 'Unknown'}</p>
+          ${item.type === 'image'
+            ? `<img src="${item.url}" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">`
+            : `<video src="${item.url}" class="w-full h-64 object-cover"></video>`
+          }
+
+          <button
+            data-delete-button
+            onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
+            class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition z-20"
+          >
+            Delete
+          </button>
+
+          <div
+            data-media-overlay
+            class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex flex-col justify-between p-4 pointer-events-none opacity-0 group-hover:opacity-100"
+          >
+            <div class="text-white">
+              <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
+              <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
+              <p class="text-xs text-gray-200">Uploaded by ${item.uploadedByName || item.uploadedBy || 'Unknown'}</p>
+            </div>
+
+            <div
+              data-reactions
+              class="flex flex-wrap gap-2 opacity-0 translate-y-2 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 pointer-events-auto"
+            >
+              ${reactionButtons}
+            </div>
           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
   } catch (e) {
     console.error(e);
     if (photoCount) photoCount.textContent = 'Error loading media';
   }
 }
+
+async function reactToMedia(mediaId, emoji) {
+  try {
+    const res = await fetch(`/api/media/${mediaId}/react`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji })
+    });
+
+    if (res.ok) {
+      loadGallery();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Reaction failed', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Reaction error', 'error');
+  }
+}
+
+window.reactToMedia = reactToMedia;
 
 window.deleteMedia = async function(mediaId) {
   const confirmed = await showConfirm('Delete this media item?', 'Delete');

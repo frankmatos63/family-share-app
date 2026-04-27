@@ -11,6 +11,10 @@ console.log('upload.js loaded');
 const MEDIA_DB_FILE = path.join(process.cwd(), 'media-database.json');
 const USERS_DB_FILE = path.join(process.cwd(), 'users.json');
 
+//const ALLOWED_REACTIONS = ['🥰', '🤗', '💪', '👍', '🎈', '🎁', '🎂', '🎉', '👏'];
+
+const ALLOWED_REACTIONS = ['🥰', '🤗', '💪', '👍', '🎈', '❤️', '🎂', '🎉', '👏'];
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'public/uploads/');
@@ -169,7 +173,7 @@ router.post('/deactivate-user', requireLogin, requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
-// 🔥 NEW: REACTIVATE
+// REACTIVATE
 router.post('/reactivate-user', requireLogin, requireAdmin, (req, res) => {
   const username = req.body.username;
   const users = readUsersDB();
@@ -233,6 +237,42 @@ router.post('/upload', requireLogin, upload.array('files', 10), (req, res) => {
 // MEDIA
 router.get('/media', requireLogin, (req, res) => {
   res.json(readMediaDB());
+});
+
+// REACT TO MEDIA
+router.post('/media/:id/react', requireLogin, (req, res) => {
+  const emoji = String(req.body.emoji || '').trim();
+  const username = req.session.user.username;
+
+  if (!ALLOWED_REACTIONS.includes(emoji)) {
+    return res.status(400).json({ error: 'Invalid reaction' });
+  }
+
+  const mediaDB = readMediaDB();
+  const item = mediaDB.find(m => m.id == req.params.id);
+
+  if (!item) return res.status(404).json({ error: 'Media not found' });
+
+  if (!item.reactions || typeof item.reactions !== 'object') {
+    item.reactions = {};
+  }
+
+  if (!Array.isArray(item.reactions[emoji])) {
+    item.reactions[emoji] = [];
+  }
+
+  if (item.reactions[emoji].includes(username)) {
+    item.reactions[emoji] = item.reactions[emoji].filter(u => u !== username);
+  } else {
+    item.reactions[emoji].push(username);
+  }
+
+  writeMediaDB(mediaDB);
+
+  res.json({
+    success: true,
+    reactions: item.reactions
+  });
 });
 
 // DELETE

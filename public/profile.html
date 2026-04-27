@@ -65,7 +65,7 @@
             <input id="newDisplayName" placeholder="Name" class="w-full border p-2 rounded">
             <input id="newPassword" type="password" placeholder="Password" class="w-full border p-2 rounded" required>
 
-            <button class="w-full bg-[#C76B4A] text-white py-2 rounded">
+            <button type="submit" class="w-full bg-[#C76B4A] text-white py-2 rounded">
               Create User
             </button>
           </form>
@@ -139,6 +139,36 @@ async function loadUsersDropdown() {
   updateToggleButton();
 }
 
+// CREATE USER
+document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const form = document.getElementById('createUserForm');
+  const username = document.getElementById('newUsername').value.trim().toLowerCase();
+  const displayName = document.getElementById('newDisplayName').value.trim();
+  const password = document.getElementById('newPassword').value.trim();
+
+  if (!username || !password) {
+    showToast('Username and password are required', 'error');
+    return;
+  }
+
+  const res = await fetch('/api/register', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username, displayName, password })
+  });
+
+  if (res.ok) {
+    showToast('User created');
+    form.reset();
+    loadUsersDropdown();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'Create user failed', 'error');
+  }
+});
+
 function updateToggleButton() {
   const username = document.getElementById('userSelect').value;
   const user = usersCache.find(u => u.username === username);
@@ -175,7 +205,7 @@ document.getElementById('resetBtn').onclick = async () => {
 
   if (res.ok) {
     showToast('Password updated');
-    passwordInput.value = ''; // 🔥 clear field
+    passwordInput.value = '';
   }
 };
 
@@ -206,7 +236,7 @@ document.getElementById('toggleActiveBtn').onclick = async () => {
 
   if (res.ok) {
     showToast(isInactive ? 'User enabled' : 'User disabled');
-    passwordInput.value = ''; // 🔥 clear field
+    passwordInput.value = '';
     loadUsersDropdown();
   }
 };

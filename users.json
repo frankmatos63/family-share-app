@@ -15,10 +15,18 @@
   },
   {
     "id": 3,
-    "username": "peter",
-    "displayName": "Peter Sellers",
+    "username": "luis",
+    "displayName": "luis",
     "role": "user",
-    "active": false,
-    "password": "$2b$10$BNz9y05nlTB2quvwUwpoMOSE5YejS1VTLwzIdHcZMXimvkw1J8GiW"
+    "active": true,
+    "password": "$2b$10$VyK5qf1VfA22HCbLB05qH.ihfQVC81YyaRuxQ0aq4.iJydcRuoJwe"
+  },
+  {
+    "id": 4,
+    "username": "pedro",
+    "displayName": "pedro",
+    "role": "user",
+    "active": true,
+    "password": "$2b$10$ETwF5.q0uOzejyQbX3pys.6bFsgskNpppmsnRJALAHtKC0KlJzmli"
   }
 ]
