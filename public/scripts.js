@@ -38,7 +38,7 @@ async function getCurrentUser() {
   }
 }
 
-function showConfirm(message) {
+function showConfirm(message, confirmLabel = 'Delete') {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
@@ -48,7 +48,7 @@ function showConfirm(message) {
         <p class="mb-6 text-sm text-[#1F2933]">${message}</p>
         <div class="flex justify-center gap-4">
           <button id="confirmCancel" class="px-4 py-2 border rounded-lg">Cancel</button>
-          <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded-lg">Delete</button>
+          <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded-lg">${confirmLabel}</button>
         </div>
       </div>
     `;
@@ -239,7 +239,7 @@ async function loadGallery() {
 }
 
 window.deleteMedia = async function(mediaId) {
-  const confirmed = await showConfirm('Delete this media item?');
+  const confirmed = await showConfirm('Delete this media item?', 'Delete');
   if (!confirmed) return;
 
   try {

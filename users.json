@@ -2,11 +2,23 @@
   {
     "id": 1,
     "username": "frank",
-    "password": "$2b$10$LesqKHeKKwOA9zkDgiWK8upGX43/DV1EXVzMCZmK1/NOEIb2ScyMy"
+    "displayName": "Frank",
+    "role": "admin",
+    "password": "$2b$10$3pFdrz8Ln/groZC9PrpRvuN5lZkJF8qc9z4mmd708Lrf0wDzR1ymm"
   },
   {
     "id": 2,
-    "username": "alex",
-    "password": "$2b$10$6mQUr0FmirR6rpyvKqChEemZDtKbHMkxXMjyrzb.bremUb3qzkMrW"
+    "username": "aracelis",
+    "displayName": "Aracelis",
+    "password": "$2b$10$aeJyeievmcpMDhcMdcKwN.Az5HpgsB7ELibugXDcIbmCt/eE1a736",
+    "active": true
+  },
+  {
+    "id": 3,
+    "username": "peter",
+    "displayName": "Peter Sellers",
+    "role": "user",
+    "active": false,
+    "password": "$2b$10$BNz9y05nlTB2quvwUwpoMOSE5YejS1VTLwzIdHcZMXimvkw1J8GiW"
   }
 ]

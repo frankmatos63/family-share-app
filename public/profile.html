@@ -11,119 +11,220 @@
 
 <header class="bg-white border-b border-[#E8DED2]">
   <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-
     <a href="index.html" class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white">
-        📷
-      </div>
+      <div class="w-10 h-10 bg-[#C76B4A] rounded-xl flex items-center justify-center text-white">📷</div>
       <h1 class="text-lg font-semibold">Fam Media</h1>
     </a>
 
     <nav class="flex items-center gap-3 text-sm">
-      <a href="index.html" class="hover:text-[#C76B4A]">Home</a>
-      <a href="upload.html" class="hover:text-[#C76B4A]">Upload</a>
-      <a href="gallery.html" class="hover:text-[#C76B4A]">Gallery</a>
+      <a href="index.html">Home</a>
+      <a href="upload.html">Upload</a>
+      <a href="gallery.html">Gallery</a>
       <a href="profile.html" class="text-[#C76B4A] font-semibold">Profile</a>
-      <button onclick="logout()" class="text-red-500 hover:text-red-600 ml-2">Logout</button>
+      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
     </nav>
-
   </div>
 </header>
 
 <main class="max-w-6xl mx-auto px-4 py-10">
 
-  <div class="bg-white rounded-xl shadow-sm border border-[#E8DED2] p-6 mb-8 flex items-center gap-5">
-    <div class="w-16 h-16 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-2xl">
-      👤
-    </div>
+  <div class="bg-white rounded-xl border p-6 mb-8 flex items-center gap-5">
+    <div class="w-16 h-16 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-2xl">👤</div>
     <div>
       <h2 id="usernameDisplay" class="text-2xl font-semibold">Loading...</h2>
-      <p class="text-gray-500 text-sm">Fam Media</p>
     </div>
   </div>
 
   <div class="grid lg:grid-cols-3 gap-8">
 
-    <div class="bg-white rounded-xl border border-[#E8DED2] p-4 h-fit shadow-sm">
-      <nav class="space-y-2">
+    <div class="bg-white rounded-xl border p-4">
+      <button onclick="showTab('uploads')" id="tabUploads"
+        class="w-full text-left px-4 py-2 rounded bg-[#C76B4A] text-white">
+        My Uploads
+      </button>
 
-        <button onclick="showTab('uploads')" id="tabUploads"
-          class="w-full text-left px-4 py-2.5 rounded-lg bg-[#C76B4A] text-white">
-          My Uploads
-        </button>
-
-        <button onclick="showTab('settings')" id="tabSettings"
-          class="w-full text-left px-4 py-2.5 rounded-lg hover:bg-[#F2EAE3] text-gray-700">
-          Settings
-        </button>
-
-      </nav>
+      <button onclick="showTab('settings')" id="tabSettings"
+        class="hidden w-full text-left px-4 py-2 mt-2 rounded">
+        Settings
+      </button>
     </div>
 
     <div class="lg:col-span-2">
 
-      <div id="contentUploads" class="tab-content">
-        <div class="mb-6">
-          <h1 class="text-2xl font-semibold">My Uploads</h1>
-          <p class="text-sm text-gray-500" id="uploadStats">Loading...</p>
-        </div>
-
+      <div id="contentUploads">
         <div id="userUploads" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
       </div>
 
-      <div id="contentSettings" class="tab-content hidden">
-        <div class="bg-white border border-[#E8DED2] rounded-xl p-6 shadow-sm">
-          <h1 class="text-2xl font-semibold mb-2">Settings</h1>
-          <p class="text-sm text-gray-500">Settings will be added later.</p>
+      <div id="contentSettings" class="hidden space-y-6">
+
+        <div class="bg-white border rounded p-6">
+          <h2 class="text-lg font-semibold mb-4">Add User</h2>
+
+          <form id="createUserForm" class="space-y-3">
+            <input id="newUsername" placeholder="Username" class="w-full border p-2 rounded" required>
+            <input id="newDisplayName" placeholder="Name" class="w-full border p-2 rounded">
+            <input id="newPassword" type="password" placeholder="Password" class="w-full border p-2 rounded" required>
+
+            <button class="w-full bg-[#C76B4A] text-white py-2 rounded">
+              Create User
+            </button>
+          </form>
         </div>
+
+        <div class="bg-white border rounded p-6">
+          <h2 class="text-lg font-semibold mb-4">User Management</h2>
+
+          <select id="userSelect" class="w-full border p-2 rounded mb-3"></select>
+
+          <input id="resetPasswordInput" type="password" placeholder="New password"
+            class="w-full border p-2 rounded mb-3">
+
+          <button id="resetBtn" class="w-full bg-[#C76B4A] text-white py-2 rounded mb-3">
+            Reset Password
+          </button>
+
+          <button id="toggleActiveBtn" class="w-full bg-gray-800 text-white py-2 rounded">
+            Disable User
+          </button>
+        </div>
+
       </div>
 
     </div>
-
   </div>
 
 </main>
 
 <script src="auth.js"></script>
-<script>
-  requireAuth();
-
-  async function loadUser() {
-    try {
-      const res = await fetch('/api/me');
-      const data = await res.json();
-
-      if (data.loggedIn) {
-        document.getElementById('usernameDisplay').textContent = data.user.username;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  loadUser();
-</script>
-
 <script src="scripts.js"></script>
 
 <script>
-function showTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  document.getElementById('content' + capitalize(tab)).classList.remove('hidden');
+requireAuth();
 
-  document.querySelectorAll('#tabUploads, #tabSettings').forEach(btn => {
-    btn.classList.remove('bg-[#C76B4A]', 'text-white');
-    btn.classList.add('text-gray-700');
+let usersCache = [];
+
+async function loadUser() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+
+  if (data.loggedIn) {
+    document.getElementById('usernameDisplay').textContent =
+      data.user.displayName || data.user.username;
+
+    if (data.user.role === 'admin') {
+      document.getElementById('tabSettings').classList.remove('hidden');
+    }
+  }
+}
+
+async function loadUsersDropdown() {
+  const res = await fetch('/api/users');
+  if (!res.ok) return;
+
+  const users = await res.json();
+  usersCache = users;
+
+  const select = document.getElementById('userSelect');
+  select.innerHTML = '';
+
+  users.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.username;
+    opt.textContent =
+      `${u.displayName} (${u.username})` +
+      (u.active === false ? ' [inactive]' : '');
+    select.appendChild(opt);
   });
 
-  const active = document.getElementById('tab' + capitalize(tab));
-  active.classList.add('bg-[#C76B4A]', 'text-white');
-  active.classList.remove('text-gray-700');
+  updateToggleButton();
+}
+
+function updateToggleButton() {
+  const username = document.getElementById('userSelect').value;
+  const user = usersCache.find(u => u.username === username);
+
+  const btn = document.getElementById('toggleActiveBtn');
+
+  if (!user) return;
+
+  if (user.active === false) {
+    btn.textContent = 'Enable User';
+    btn.classList.remove('bg-gray-800');
+    btn.classList.add('bg-green-600');
+  } else {
+    btn.textContent = 'Disable User';
+    btn.classList.remove('bg-green-600');
+    btn.classList.add('bg-gray-800');
+  }
+}
+
+document.getElementById('userSelect').addEventListener('change', updateToggleButton);
+
+// RESET PASSWORD
+document.getElementById('resetBtn').onclick = async () => {
+  const username = document.getElementById('userSelect').value;
+  const passwordInput = document.getElementById('resetPasswordInput');
+
+  if (!username || !passwordInput.value) return;
+
+  const res = await fetch('/api/reset-password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username, password: passwordInput.value })
+  });
+
+  if (res.ok) {
+    showToast('Password updated');
+    passwordInput.value = ''; // 🔥 clear field
+  }
+};
+
+// ENABLE / DISABLE
+document.getElementById('toggleActiveBtn').onclick = async () => {
+  const username = document.getElementById('userSelect').value;
+  const user = usersCache.find(u => u.username === username);
+  const passwordInput = document.getElementById('resetPasswordInput');
+
+  if (!user) return;
+
+  const isInactive = user.active === false;
+
+  const confirmed = await showConfirm(
+    isInactive ? `Enable ${username}?` : `Disable ${username}?`,
+    isInactive ? 'Enable' : 'Disable'
+  );
+
+  if (!confirmed) return;
+
+  const endpoint = isInactive ? '/api/reactivate-user' : '/api/deactivate-user';
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username })
+  });
+
+  if (res.ok) {
+    showToast(isInactive ? 'User enabled' : 'User disabled');
+    passwordInput.value = ''; // 🔥 clear field
+    loadUsersDropdown();
+  }
+};
+
+function showTab(tab) {
+  document.getElementById('contentUploads').classList.add('hidden');
+  document.getElementById('contentSettings').classList.add('hidden');
+
+  document.getElementById('content' + capitalize(tab)).classList.remove('hidden');
+
+  if (tab === 'settings') loadUsersDropdown();
 }
 
 function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+loadUser();
 </script>
 
 </body>
