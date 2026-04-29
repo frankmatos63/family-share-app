@@ -211,7 +211,7 @@ router.get('/me', (req, res) => {
 });
 
 // UPLOAD
-router.post('/upload', requireLogin, upload.array('files', 10), (req, res) => {
+router.post('/upload', requireLogin, upload.array('files', 25), (req, res) => {
   const mediaDB = readMediaDB();
 
   req.files.forEach(file => {
