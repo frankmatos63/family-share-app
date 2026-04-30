@@ -20,11 +20,11 @@
     </a>
 
     <nav class="flex items-center gap-3 text-sm">
-      <a href="index.html" class="hover:text-[#C76B4A]">Home</a>
+      <a href="index.html">Home</a>
       <a href="upload.html" class="text-[#C76B4A] font-semibold">Upload</a>
-      <a href="gallery.html" class="hover:text-[#C76B4A]">Gallery</a>
-      <a href="profile.html" class="hover:text-[#C76B4A]">Profile</a>
-      <button onclick="logout()" class="text-red-500 hover:text-red-600 ml-2">Logout</button>
+      <a href="gallery.html">Gallery</a>
+      <a href="profile.html">Profile</a>
+      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
     </nav>
 
   </div>
@@ -34,31 +34,34 @@
 
   <div class="mb-8">
     <h1 class="text-3xl font-semibold mb-2">Upload Media</h1>
-    <p class="text-gray-500">Add photos or videos to Fam Media</p>
+    <p class="text-gray-500">Add photos or videos</p>
   </div>
 
   <form id="uploadForm" class="space-y-6">
 
+    <!-- DROP ZONE -->
     <div id="dropZone" class="border border-dashed border-[#E8DED2] rounded-xl p-10 text-center bg-white hover:border-[#C76B4A] transition-all shadow-sm">
 
       <div class="w-14 h-14 mx-auto mb-4 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-2xl">
         ↑
       </div>
 
-      <p class="text-lg mb-2">Drag & drop files here</p>
-      <p class="text-sm text-gray-500 mb-2">or select manually</p>
-      <p class="text-xs text-gray-500 mb-3">Maximum 25 files per upload</p>
+      <p class="text-lg mb-2">Drag & drop files</p>
+      <p class="text-sm text-gray-500 mb-2">or browse</p>
+      <p class="text-xs text-gray-500 mb-3">Max 25 files</p>
+
       <p id="uploadLimitWarning" class="hidden text-sm text-red-500 mb-4">
-        Please select 25 files or fewer.
+        Max 25 files allowed
       </p>
 
-      <label class="inline-block px-5 py-2.5 bg-[#C76B4A] text-white rounded-lg cursor-pointer hover:opacity-90">
+      <label class="inline-block px-5 py-2.5 bg-[#C76B4A] text-white rounded-lg cursor-pointer">
         Browse Files
         <input type="file" id="fileUpload" multiple accept="image/*,video/*" class="hidden">
       </label>
 
     </div>
 
+    <!-- FILE LIST -->
     <div id="selectedFilesContainer" class="hidden">
       <div class="bg-white border border-[#E8DED2] rounded-xl p-4 shadow-sm">
         <h3 class="text-sm text-gray-500 mb-3">Selected Files</h3>
@@ -66,33 +69,41 @@
       </div>
     </div>
 
+    <!-- CAPTION -->
     <div>
       <label class="text-sm text-gray-500 mb-2 block">Caption</label>
       <input
         type="text"
         id="title"
-        placeholder="Add a short caption, optional"
+        placeholder="Optional"
         class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
       >
     </div>
 
+    <!-- ALBUM SELECT -->
     <div>
       <label class="text-sm text-gray-500 mb-2 block">Album</label>
       <select
         id="album"
         class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
       >
-        <option value="">No album</option>
-        <option value="Family">Family</option>
-        <option value="Trips">Trips</option>
-        <option value="Celebrations">Celebrations</option>
-        <option value="Kids">Kids</option>
-        <option value="Pets">Pets</option>
-        <option value="Old Memories">Old Memories</option>
-        <option value="Other">Other</option>
+        <option value="">Quick Upload / Misc</option>
       </select>
+      <p class="text-xs text-gray-400 mt-1">Use existing album or create a new one below</p>
     </div>
 
+    <!-- NEW ALBUM -->
+    <div>
+      <label class="text-sm text-gray-500 mb-2 block">Create new album</label>
+      <input
+        type="text"
+        id="newAlbum"
+        placeholder="e.g. Cruise 2026"
+        class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+      >
+    </div>
+
+    <!-- ACTIONS -->
     <div class="flex gap-4 pt-4">
       <button
         id="uploadButton"

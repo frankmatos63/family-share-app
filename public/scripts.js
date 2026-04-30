@@ -17,20 +17,21 @@ const dailyMessages = [
 ];
 
 const REACTION_CONFIG = [
-  { value: '≡ƒÑ░', display: '😂' },
-  { value: '≡ƒñù', display: '🥰' },
-  { value: '≡ƒÆ¬', display: '💪' },
-  { value: '≡ƒæì', display: '👍' },
-  { value: '≡ƒÄê', display: '🎉' },
-  { value: 'Γ¥ñ∩╕Å', display: '❤️' },
-  { value: '≡ƒÄé', display: '🎂' },
-  { value: '≡ƒÄë', display: '🎁' },
-  { value: '≡ƒæÅ', display: '👏' }
+  { value: 'Γëí╞Æ├æΓûæ', display: '😂' },
+  { value: 'Γëí╞Æ├▒├╣', display: '🥰' },
+  { value: 'Γëí╞Æ├å┬¼', display: '💪' },
+  { value: 'Γëí╞Æ├ª├¼', display: '👍' },
+  { value: 'Γëí╞Æ├ä├¬', display: '🎉' },
+  { value: '╬ô┬Ñ├▒Γê⌐Γòò├à', display: '❤️' },
+  { value: 'Γëí╞Æ├ä├⌐', display: '🎂' },
+  { value: 'Γëí╞Æ├ä├½', display: '🎁' },
+  { value: 'Γëí╞Æ├ª├à', display: '👏' }
 ];
 
 const MAX_UPLOAD_FILES = 25;
 
 let galleryMedia = [];
+let profileMedia = [];
 let galleryCurrentUser = null;
 let activeAlbumFilter = '';
 
@@ -101,6 +102,29 @@ function getActiveReactionEntries(item) {
       users: getReactionUsers(item, reaction.value)
     }))
     .filter(reaction => Array.isArray(reaction.users) && reaction.users.length > 0);
+}
+
+async function populateUploadAlbums() {
+  const select = document.getElementById('album');
+  if (!select) return;
+
+  try {
+    const res = await fetch('/api/media');
+    const data = await res.json();
+
+    const albums = [...new Set(
+      data
+        .map(item => normalizeAlbum(item.album))
+        .filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b));
+
+    select.innerHTML = `
+      <option value="">Quick Upload / Misc</option>
+      ${albums.map(album => `<option value="${escapeHtml(album)}">${escapeHtml(album)}</option>`).join('')}
+    `;
+  } catch (e) {
+    console.error('Failed to load upload albums:', e);
+  }
 }
 
 function showConfirm(message, confirmLabel = 'Delete') {
@@ -378,7 +402,6 @@ function renderGalleryCard(item) {
 
 function getFilteredGalleryMedia() {
   if (!activeAlbumFilter) return galleryMedia;
-
   return galleryMedia.filter(item => normalizeAlbum(item.album) === activeAlbumFilter);
 }
 
@@ -599,10 +622,17 @@ function initializeUpload() {
 
     const titleInput = document.getElementById('title');
     const albumInput = document.getElementById('album');
+    const newAlbumInput = document.getElementById('newAlbum');
 
-    formData.append('title', titleInput ? titleInput.value.trim() : '');
+    const title = titleInput ? titleInput.value.trim() : '';
+    const selectedAlbum = albumInput ? albumInput.value.trim() : '';
+    const newAlbum = newAlbumInput ? newAlbumInput.value.trim() : '';
+
+    const finalAlbum = newAlbum || selectedAlbum;
+
+    formData.append('title', title);
     formData.append('description', '');
-    formData.append('album', albumInput ? albumInput.value.trim() : '');
+    formData.append('album', finalAlbum);
 
     try {
       const res = await fetch('/api/upload', {
@@ -616,6 +646,7 @@ function initializeUpload() {
         updateSelectedFilesList();
         uploadForm.reset();
         hideWarning();
+        populateUploadAlbums();
       } else {
         const data = await res.json().catch(() => ({}));
         showToast(data.error || 'Media upload failed', 'error');
@@ -651,11 +682,189 @@ async function loadGallery() {
   }
 }
 
+// ===== PROFILE PAGE =====
+async function loadUserUploads() {
+  const container = document.getElementById('userUploads');
+  const uploadStats = document.getElementById('uploadStats');
+
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      if (uploadStats) uploadStats.textContent = 'Not logged in';
+      container.innerHTML = '<p class="text-gray-500">Please log in.</p>';
+      return;
+    }
+
+    const res = await fetch('/api/media');
+    const data = await res.json();
+
+    const userItems = data
+      .filter(item => item.uploadedBy === currentUser.username)
+      .slice()
+      .reverse();
+
+    profileMedia = userItems;
+
+    if (uploadStats) uploadStats.textContent = `${userItems.length} uploads`;
+
+    if (userItems.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">No uploads yet.</p>';
+      return;
+    }
+
+    const grouped = {};
+
+    userItems.forEach(item => {
+      const album = normalizeAlbum(item.album) || 'Misc';
+      if (!grouped[album]) grouped[album] = [];
+      grouped[album].push(item);
+    });
+
+    const sortedAlbums = Object.keys(grouped).sort((a, b) => {
+      if (a === 'Misc') return 1;
+      if (b === 'Misc') return -1;
+      return a.localeCompare(b);
+    });
+
+    container.innerHTML = sortedAlbums.map(album => {
+      const items = grouped[album];
+      const latest = items[0];
+
+      const preview = items.slice(0, 3).map(item => `
+        <div class="w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
+          ${
+            item.type === 'image'
+              ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
+              : `<video src="${escapeHtml(item.url)}" class="w-full h-full object-cover"></video>`
+          }
+        </div>
+      `).join('');
+
+      return `
+        <div class="bg-white border border-[#E8DED2] rounded-2xl p-6 mb-6 shadow-sm hover:shadow-md transition">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h2 class="text-lg font-semibold">${escapeHtml(album)}</h2>
+              <p class="text-xs text-gray-500 mt-1">
+                ${items.length} item${items.length > 1 ? 's' : ''} • ${formatDate(latest.uploadedAt)}
+              </p>
+            </div>
+
+            <button
+              onclick='openAlbumModal(${JSON.stringify(album)})'
+              class="px-4 py-2 bg-[#C76B4A] text-white rounded-lg text-sm hover:opacity-90"
+            >
+              Open
+            </button>
+          </div>
+
+          <div class="flex gap-3">
+            ${preview}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (e) {
+    console.error(e);
+    if (uploadStats) uploadStats.textContent = 'Error loading uploads';
+  }
+}
+
+function openAlbumModal(albumName) {
+  const items = profileMedia.filter(item => {
+    const album = normalizeAlbum(item.album) || 'Misc';
+    return album === albumName;
+  });
+
+  const existingModal = document.getElementById('albumManagerModal');
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'albumManagerModal';
+  modal.className = 'fixed inset-0 bg-black/90 z-50 overflow-y-auto';
+
+  document.body.style.overflow = 'hidden';
+
+  modal.innerHTML = `
+    <div class="max-w-6xl mx-auto px-4 py-6">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-white text-xl font-semibold">${escapeHtml(albumName)}</h2>
+          <p class="text-white/60 text-sm">${items.length} item${items.length === 1 ? '' : 's'}</p>
+        </div>
+
+        <button
+          id="closeAlbumManager"
+          class="text-white text-3xl leading-none"
+          aria-label="Close album"
+        >
+          ×
+        </button>
+      </div>
+
+      ${
+        items.length === 0
+          ? '<p class="text-white/70">No media in this album.</p>'
+          : `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              ${items.map(item => {
+                const caption = String(item.title || '').trim();
+
+                return `
+                  <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+                    <button
+                      type="button"
+                      onclick='openMediaViewer(${JSON.stringify(item)})'
+                      class="block w-full text-left"
+                    >
+                      <div class="h-64 bg-gray-100">
+                        ${
+                          item.type === 'image'
+                            ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
+                            : `<video src="${escapeHtml(item.url)}" class="w-full h-full object-cover"></video>`
+                        }
+                      </div>
+                    </button>
+
+                    <div class="p-3">
+                      ${
+                        caption
+                          ? `<p class="text-sm font-medium truncate">${escapeHtml(caption)}</p>`
+                          : ''
+                      }
+                      <p class="text-xs text-gray-500">${formatDate(item.uploadedAt)}</p>
+
+                      <button
+                        onclick='deleteMedia(${JSON.stringify(item.id)})'
+                        class="mt-2 text-xs text-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>`
+      }
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#closeAlbumManager').onclick = () => {
+    document.body.style.overflow = '';
+    modal.remove();
+  };
+}
+
+// ===== GLOBAL ACTIONS =====
 window.reactToMedia = reactToMedia;
 window.showReactionPicker = showReactionPicker;
 window.openMediaViewer = openMediaViewer;
 window.openMediaViewerById = openMediaViewerById;
 window.toggleCardMenu = toggleCardMenu;
+window.openAlbumModal = openAlbumModal;
 
 window.deleteMedia = async function(mediaId) {
   const confirmed = await showConfirm('Delete this media item?', 'Delete');
@@ -670,6 +879,13 @@ window.deleteMedia = async function(mediaId) {
       showToast('Media deleted', 'success');
 
       galleryMedia = galleryMedia.filter(item => String(item.id) !== String(mediaId));
+      profileMedia = profileMedia.filter(item => String(item.id) !== String(mediaId));
+
+      const albumModal = document.getElementById('albumManagerModal');
+      if (albumModal) {
+        document.body.style.overflow = '';
+        albumModal.remove();
+      }
 
       if (document.getElementById('gallery')) {
         populateAlbumFilter();
@@ -749,84 +965,6 @@ async function loadHomePage() {
   }
 }
 
-// ===== PROFILE PAGE =====
-async function loadUserUploads() {
-  const container = document.getElementById('userUploads');
-  const uploadStats = document.getElementById('uploadStats');
-
-  try {
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      if (uploadStats) uploadStats.textContent = 'Not logged in';
-      container.innerHTML = '<p class="text-gray-500 col-span-full">Please log in.</p>';
-      return;
-    }
-
-    const res = await fetch('/api/media');
-    const data = await res.json();
-
-    const userItems = data
-      .filter(item => item.uploadedBy === currentUser.username)
-      .slice()
-      .reverse()
-      .slice(0, 6);
-
-    if (uploadStats) uploadStats.textContent = `${userItems.length} uploads`;
-
-    if (userItems.length === 0) {
-      container.innerHTML = '<p class="text-gray-500 col-span-full">No uploads yet.</p>';
-      return;
-    }
-
-    container.innerHTML = userItems.map(item => {
-      const caption = String(item.title || '').trim();
-
-      return `
-        <div
-          data-media-card
-          data-media-id="${escapeHtml(item.id)}"
-          class="relative bg-white rounded-2xl overflow-hidden border border-[#E8DED2] shadow-sm group"
-        >
-          <div class="aspect-square overflow-hidden">
-            ${item.type === 'image'
-              ? `<img
-                  src="${escapeHtml(item.url)}"
-                  class="w-full h-full object-cover"
-                >`
-              : `<video
-                  src="${escapeHtml(item.url)}"
-                  class="w-full h-full object-cover"
-                ></video>`
-            }
-          </div>
-
-          <button
-            data-delete-button
-            onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
-            class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition"
-          >
-            Delete
-          </button>
-
-          <div class="p-3">
-            ${
-              caption
-                ? `<p class="text-sm font-medium truncate">${escapeHtml(caption)}</p>`
-                : ''
-            }
-            <p class="text-xs text-gray-500 ${caption ? '' : ''}">${formatDate(item.uploadedAt)}</p>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (e) {
-    console.error(e);
-    if (uploadStats) uploadStats.textContent = 'Error loading uploads';
-  }
-}
-
 // ===== TOAST =====
 function showToast(message, type = 'success') {
   const existingToast = document.getElementById('appToast');
@@ -862,7 +1000,6 @@ function showToast(message, type = 'success') {
   }, 2200);
 }
 
-// ===== HELPERS =====
 function formatDate(dateString) {
   if (!dateString) return '';
 
@@ -873,16 +1010,18 @@ function formatDate(dateString) {
   });
 }
 
-// ===== GLOBAL CLICK HANDLER =====
 document.addEventListener('click', () => {
   document.querySelectorAll('[data-card-menu]').forEach(menu => {
     menu.classList.add('hidden');
   });
 });
 
-// ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('uploadForm')) initializeUpload();
+  if (document.getElementById('uploadForm')) {
+    initializeUpload();
+    populateUploadAlbums();
+  }
+
   if (document.getElementById('gallery')) loadGallery();
   if (document.getElementById('userUploads')) loadUserUploads();
   if (document.getElementById('totalCount')) loadHomePage();
