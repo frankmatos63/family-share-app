@@ -19,6 +19,7 @@ const dailyMessages = [
 const REACTION_CONFIG = [
   { value: '╬ô├½├¡Γò₧├åΓö£├ª╬ô├╗├ª', display: '😂' },
   { value: '╬ô├½├¡Γò₧├åΓö£ΓûÆΓö£Γòú', display: '🥰' },
+  { value: '🙂', display: '🙂' },
   { value: '╬ô├½├¡Γò₧├åΓö£├ÑΓö¼┬╝', display: '💪' },
   { value: '╬ô├½├¡Γò₧├åΓö£┬¬Γö£┬╝', display: '👍' },
   { value: '╬ô├½├¡Γò₧├åΓö£├ñΓö£┬¼', display: '🎉' },
@@ -34,6 +35,14 @@ let galleryMedia = [];
 let profileMedia = [];
 let galleryCurrentUser = null;
 let activeAlbumFilter = '';
+
+let activeViewerModal = null;
+let activeViewerKeyHandler = null;
+let previousBodyOverflow = '';
+let previousBodyTouchAction = '';
+let previousBodyOverscrollBehavior = '';
+let previousBodyPosition = '';
+let previousBodyWidth = '';
 
 function getDailyMessage() {
   const today = new Date().toDateString();
@@ -157,42 +166,131 @@ function showConfirm(message, confirmLabel = 'Delete') {
   });
 }
 
-function openMediaViewer(item) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black z-50 flex items-center justify-center';
+function lockBodyForViewer() {
+  previousBodyOverflow = document.body.style.overflow;
+  previousBodyTouchAction = document.body.style.touchAction;
+  previousBodyOverscrollBehavior = document.body.style.overscrollBehavior;
+  previousBodyPosition = document.body.style.position;
+  previousBodyWidth = document.body.style.width;
 
   document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  document.body.style.overscrollBehavior = 'none';
+  document.body.style.position = 'relative';
+  document.body.style.width = '100%';
+}
+
+function unlockBodyForViewer() {
+  document.body.style.overflow = previousBodyOverflow;
+  document.body.style.touchAction = previousBodyTouchAction;
+  document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+  document.body.style.position = previousBodyPosition;
+  document.body.style.width = previousBodyWidth;
+}
+
+function closeMediaViewer() {
+  if (!activeViewerModal) return;
+
+  activeViewerModal.remove();
+  activeViewerModal = null;
+
+  if (activeViewerKeyHandler) {
+    document.removeEventListener('keydown', activeViewerKeyHandler);
+    activeViewerKeyHandler = null;
+  }
+
+  unlockBodyForViewer();
+}
+
+function openMediaViewer(item) {
+  closeMediaViewer();
+  lockBodyForViewer();
+
+  const modal = document.createElement('div');
+  modal.id = 'mediaLightbox';
+  modal.className = 'fixed inset-0 z-[70] bg-black flex flex-col';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const mediaMarkup = item.type === 'image'
+    ? `
+      <img
+        src="${escapeHtml(item.url)}"
+        alt=""
+        draggable="false"
+        class="max-w-full max-h-full object-contain select-none"
+        style="touch-action: none;"
+      >
+    `
+    : `
+      <video
+        src="${escapeHtml(item.url)}"
+        controls
+        autoplay
+        playsinline
+        class="max-w-full max-h-full object-contain"
+        style="touch-action: manipulation;"
+      ></video>
+    `;
 
   modal.innerHTML = `
-    <button
-      id="closeMediaViewer"
-      class="absolute top-4 right-4 z-20 bg-white/15 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl"
-      aria-label="Close viewer"
-    >
-      ×
-    </button>
+    <div class="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-4 bg-gradient-to-b from-black/70 to-transparent">
+      <div class="text-white text-sm font-medium truncate pr-4">
+        ${escapeHtml(String(item.title || '').trim())}
+      </div>
 
-    <div class="w-full h-full overflow-auto flex items-center justify-center p-4">
-      ${
-        item.type === 'image'
-          ? `<img src="${escapeHtml(item.url)}" class="max-w-full max-h-full object-contain">`
-          : `<video src="${escapeHtml(item.url)}" controls autoplay class="max-w-full max-h-full"></video>`
-      }
+      <button
+        id="closeMediaViewer"
+        type="button"
+        class="shrink-0 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white text-2xl leading-none flex items-center justify-center"
+        aria-label="Close viewer"
+      >
+        ×
+      </button>
+    </div>
+
+    <div
+      id="mediaViewerStage"
+      class="flex-1 w-full h-full flex items-center justify-center px-3 py-16 overflow-hidden"
+    >
+      ${mediaMarkup}
     </div>
   `;
 
+  activeViewerModal = modal;
   document.body.appendChild(modal);
 
-  function closeViewer() {
-    document.body.style.overflow = '';
-    modal.remove();
-  }
+  const closeButton = modal.querySelector('#closeMediaViewer');
+  const stage = modal.querySelector('#mediaViewerStage');
 
-  modal.querySelector('#closeMediaViewer').onclick = closeViewer;
+  closeButton.onclick = (e) => {
+    e.stopPropagation();
+    closeMediaViewer();
+  };
 
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeViewer();
+    if (e.target === modal || e.target === stage) {
+      closeMediaViewer();
+    }
   });
+
+  modal.addEventListener('wheel', (e) => {
+    e.preventDefault();
+  }, { passive: false });
+
+  modal.addEventListener('touchmove', (e) => {
+    if (item.type === 'image') {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  activeViewerKeyHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeMediaViewer();
+    }
+  };
+
+  document.addEventListener('keydown', activeViewerKeyHandler);
 }
 
 function openMediaViewerById(mediaId) {
@@ -766,6 +864,99 @@ function closeAlbumModal(modal) {
   modal.remove();
 }
 
+function openEditCaptionModal(mediaId, currentTitle) {
+  const existing = document.getElementById('editCaptionModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'editCaptionModal';
+  modal.className = 'fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4';
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+      <h2 class="text-lg font-semibold mb-4">Edit Caption</h2>
+
+      <input
+        id="editCaptionInput"
+        type="text"
+        value="${escapeHtml(currentTitle)}"
+        placeholder="Caption"
+        class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+      >
+
+      <div class="flex justify-end gap-3 mt-5">
+        <button
+          id="cancelEditCaption"
+          class="px-4 py-2 border border-[#E8DED2] rounded-lg"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="saveEditCaption"
+          class="px-4 py-2 bg-[#C76B4A] text-white rounded-lg"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#cancelEditCaption').onclick = () => modal.remove();
+
+  modal.querySelector('#saveEditCaption').onclick = async () => {
+    const input = modal.querySelector('#editCaptionInput');
+    const newTitle = input ? input.value.trim() : '';
+
+    try {
+      const res = await fetch(`/api/media/${mediaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.item) {
+        showToast(data.error || 'Update failed', 'error');
+        return;
+      }
+
+      profileMedia = profileMedia.map(item =>
+        String(item.id) === String(mediaId) ? data.item : item
+      );
+
+      galleryMedia = galleryMedia.map(item =>
+        String(item.id) === String(mediaId) ? data.item : item
+      );
+
+      modal.remove();
+
+      const albumName = normalizeAlbum(data.item.album) || 'Misc';
+      const albumModal = document.getElementById('albumManagerModal');
+
+      if (albumModal) {
+        openAlbumModal(albumName);
+      }
+
+      if (document.getElementById('userUploads')) {
+        loadUserUploads();
+      }
+
+      showToast('Caption updated');
+    } catch (err) {
+      console.error(err);
+      showToast('Update error', 'error');
+    }
+  };
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+
 function openAlbumModal(albumName) {
   const items = profileMedia.filter(item => {
     const album = normalizeAlbum(item.album) || 'Misc';
@@ -835,16 +1026,25 @@ function openAlbumModal(albumName) {
                       ${
                         caption
                           ? `<p class="text-sm font-medium mb-1">${escapeHtml(caption)}</p>`
-                          : ''
+                          : '<p class="text-sm text-gray-400 italic mb-1">No caption</p>'
                       }
                       <p class="text-xs text-gray-500 mb-3">${formatDate(item.uploadedAt)}</p>
 
-                      <button
-                        onclick='deleteMedia(${JSON.stringify(item.id)})'
-                        class="text-xs text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
+                      <div class="flex gap-4">
+                        <button
+                          onclick='openEditCaptionModal(${JSON.stringify(item.id)}, ${JSON.stringify(caption)})'
+                          class="text-xs text-[#C76B4A] hover:underline"
+                        >
+                          Edit Caption
+                        </button>
+
+                        <button
+                          onclick='deleteMedia(${JSON.stringify(item.id)})'
+                          class="text-xs text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 `;
@@ -867,9 +1067,11 @@ function openAlbumModal(albumName) {
 window.reactToMedia = reactToMedia;
 window.showReactionPicker = showReactionPicker;
 window.openMediaViewer = openMediaViewer;
+window.closeMediaViewer = closeMediaViewer;
 window.openMediaViewerById = openMediaViewerById;
 window.toggleCardMenu = toggleCardMenu;
 window.openAlbumModal = openAlbumModal;
+window.openEditCaptionModal = openEditCaptionModal;
 
 window.deleteMedia = async function(mediaId) {
   const confirmed = await showConfirm('Delete this media item?', 'Delete');

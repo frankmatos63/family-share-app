@@ -11,9 +11,20 @@ console.log('upload.js loaded');
 const MEDIA_DB_FILE = path.join(process.cwd(), 'media-database.json');
 const USERS_DB_FILE = path.join(process.cwd(), 'users.json');
 
-//const ALLOWED_REACTIONS = ['≡ƒÑ░', '≡ƒñù', '≡ƒÆ¬', '≡ƒæì', '≡ƒÄê', '≡ƒÄü', '≡ƒÄé', '≡ƒÄë', '≡ƒæÅ'];
+//const ALLOWED_REACTIONS = ['Γëí╞Æ├æΓûæ', 'Γëí╞Æ├▒├╣', 'Γëí╞Æ├å┬¼', 'Γëí╞Æ├ª├¼', 'Γëí╞Æ├ä├¬', 'Γëí╞Æ├ä├╝', 'Γëí╞Æ├ä├⌐', 'Γëí╞Æ├ä├½', 'Γëí╞Æ├ª├à'];
 
-const ALLOWED_REACTIONS = ['≡ƒÑ░', '≡ƒñù', '≡ƒÆ¬', '≡ƒæì', '≡ƒÄê', 'Γ¥ñ∩╕Å', '≡ƒÄé', '≡ƒÄë', '≡ƒæÅ'];
+const ALLOWED_REACTIONS = [
+  'Γëí╞Æ├æΓûæ',
+  'Γëí╞Æ├▒├╣',
+  'Γëí╞Æ├å┬¼',
+  'Γëí╞Æ├ª├¼',
+  'Γëí╞Æ├ä├¬',
+  '╬ô┬Ñ├▒Γê⌐Γòò├à',
+  'Γëí╞Æ├ä├⌐',
+  'Γëí╞Æ├ä├½',
+  'Γëí╞Æ├ª├à',
+  '🙂'
+];
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -269,6 +280,30 @@ router.post('/media/:id/react', requireLogin, (req, res) => {
   } else {
     item.reactions[emoji].push(username);
   }
+
+  writeMediaDB(mediaDB);
+
+  res.json({
+    success: true,
+    item
+  });
+});
+
+// EDIT MEDIA CAPTION
+router.put('/media/:id', requireLogin, (req, res) => {
+  const mediaDB = readMediaDB();
+  const item = mediaDB.find(m => m.id == req.params.id);
+
+  if (!item) return res.status(404).json({ error: 'Media not found' });
+
+  const isOwner = item.uploadedBy === req.session.user.username;
+  const isAdmin = req.session.user.role === 'admin';
+
+  if (!isOwner && !isAdmin) {
+    return res.status(403).json({ error: 'Not allowed' });
+  }
+
+  item.title = String(req.body.title || '').trim();
 
   writeMediaDB(mediaDB);
 
