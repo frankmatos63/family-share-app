@@ -17,16 +17,16 @@ const dailyMessages = [
 ];
 
 const REACTION_CONFIG = [
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö£┬¬Γò¼├┤Γö£ΓòùΓö£┬¬', display: '😂' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬ú╬ô├╗├å╬ô├╢┬ú╬ô├▓├║', display: '🥰' },
-  { value: '🙂', display: '🙂' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö£├æ╬ô├╢┬╝Γö¼Γò¥', display: '💪' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö¼┬¼╬ô├╢┬úΓö¼Γò¥', display: '👍' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö£├▒╬ô├╢┬úΓö¼┬╝', display: '🎉' },
-  { value: '╬ô├▓┬╝Γö£Γöñ╬ô├╢┬╝Γö£├ª╬ô├╢┬ú╬ô├╗├åΓò¼├┤Γö£┬¼╬ô├«├ëΓò¼├┤Γö£ΓûôΓö£Γûô╬ô├╢┬úΓö£├í', display: '❤️' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö£├▒╬ô├╢┬ú╬ô├«├ë', display: '🎂' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö£├▒╬ô├╢┬úΓö¼Γò£', display: '🎁' },
-  { value: 'Γò¼├┤Γö£┬╜Γö£┬í╬ô├▓ΓéºΓö£├Ñ╬ô├╢┬úΓö¼┬¼╬ô├╢┬úΓö£├í', display: '👏' }
+  { id: 'laugh', emoji: '😂', label: 'Funny' },
+  { id: 'love', emoji: '🥰', label: 'Love' },
+  { id: 'smile', emoji: '🙂', label: 'Smile' },
+  { id: 'strong', emoji: '💪', label: 'Strong' },
+  { id: 'like', emoji: '👍', label: 'Like' },
+  { id: 'celebrate', emoji: '🎉', label: 'Celebrate' },
+  { id: 'heart', emoji: '❤️', label: 'Heart' },
+  { id: 'birthday', emoji: '🎂', label: 'Birthday' },
+  { id: 'gift', emoji: '🎁', label: 'Gift' },
+  { id: 'clap', emoji: '👏', label: 'Clap' }
 ];
 
 const MAX_UPLOAD_FILES = 25;
@@ -86,32 +86,22 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function getReactionDisplay(value) {
-  const found = REACTION_CONFIG.find(r => r.value === value || r.display === value);
-  return found ? found.display : value;
+function getReactionConfig(reactionId) {
+  return REACTION_CONFIG.find(r => r.id === reactionId);
 }
 
-function getReactionValue(displayOrValue) {
-  const found = REACTION_CONFIG.find(r => r.display === displayOrValue || r.value === displayOrValue);
-  return found ? found.value : displayOrValue;
-}
-
-function getReactionUsers(item, reactionValue) {
+function getReactionUsers(item, reactionId) {
   const reactions = item.reactions || {};
-  const config = REACTION_CONFIG.find(r => r.value === reactionValue);
-
-  if (Array.isArray(reactions[reactionValue])) return reactions[reactionValue];
-  if (config && Array.isArray(reactions[config.display])) return reactions[config.display];
-
-  return [];
+  return Array.isArray(reactions[reactionId]) ? reactions[reactionId] : [];
 }
 
 function getActiveReactionEntries(item) {
   return REACTION_CONFIG
     .map(reaction => ({
-      value: reaction.value,
-      display: reaction.display,
-      users: getReactionUsers(item, reaction.value)
+      id: reaction.id,
+      emoji: reaction.emoji,
+      label: reaction.label,
+      users: getReactionUsers(item, reaction.id)
     }))
     .filter(reaction => Array.isArray(reaction.users) && reaction.users.length > 0);
 }
@@ -533,8 +523,8 @@ function openMediaViewer(item) {
       }
     }, { passive: false });
 
-    img.addEventListener('touchend', () => {
-      if (event?.touches?.length === 0) {
+    img.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) {
         isDragging = false;
         lastTouchDistance = null;
       }
@@ -592,7 +582,7 @@ function showReactionPicker(mediaId) {
     ? activeReactions.map(reaction => `
         <div class="flex items-center justify-between py-2 border-b border-[#F0E7DC] last:border-b-0">
           <div class="flex items-center gap-2">
-            <span class="text-xl">${reaction.display}</span>
+            <span class="text-xl">${reaction.emoji}</span>
             <span class="text-sm text-[#1F2933]">${reaction.users.length}</span>
           </div>
           <div class="text-xs text-gray-500 truncate max-w-[190px]">
@@ -603,21 +593,21 @@ function showReactionPicker(mediaId) {
     : '<p class="text-sm text-gray-500 py-2">No reactions yet.</p>';
 
   const pickerButtons = REACTION_CONFIG.map(reaction => {
-    const users = getReactionUsers(item, reaction.value);
+    const users = getReactionUsers(item, reaction.id);
     const isActive = username && users.includes(username);
 
     return `
       <button
         type="button"
-        onclick='event.stopPropagation(); reactToMedia(${JSON.stringify(item.id)}, ${JSON.stringify(reaction.value)})'
+        onclick='event.stopPropagation(); reactToMedia(${JSON.stringify(item.id)}, ${JSON.stringify(reaction.id)})'
         class="w-12 h-12 rounded-full border text-xl flex items-center justify-center transition active:scale-95 ${
           isActive
             ? 'bg-[#F3D6C9] text-[#8A3F2B] border-[#E8B8A3] shadow-sm'
             : 'bg-white text-[#1F2933] border-[#E8DED2] hover:bg-[#FAF7F2]'
         }"
-        title="${isActive ? 'Remove reaction' : 'React'}"
+        title="${escapeHtml(reaction.label)}"
       >
-        ${reaction.display}
+        ${reaction.emoji}
       </button>
     `;
   }).join('');
@@ -835,14 +825,12 @@ function replaceGalleryCard(updatedItem) {
   existingCard.replaceWith(newCard);
 }
 
-async function reactToMedia(mediaId, emoji) {
+async function reactToMedia(mediaId, reactionId) {
   try {
-    const reactionValue = getReactionValue(emoji);
-
     const res = await fetch(`/api/media/${mediaId}/react`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emoji: reactionValue })
+      body: JSON.stringify({ reactionId })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -850,13 +838,6 @@ async function reactToMedia(mediaId, emoji) {
     if (res.ok && data.item) {
       replaceGalleryCard(data.item);
       refreshOpenReactionPicker(mediaId);
-    } else if (res.ok && data.reactions) {
-      const existing = galleryMedia.find(item => String(item.id) === String(mediaId));
-      if (existing) {
-        existing.reactions = data.reactions;
-        replaceGalleryCard(existing);
-        refreshOpenReactionPicker(mediaId);
-      }
     } else {
       showToast(data.error || 'Reaction failed', 'error');
     }

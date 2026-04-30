@@ -11,19 +11,17 @@ console.log('upload.js loaded');
 const MEDIA_DB_FILE = path.join(process.cwd(), 'media-database.json');
 const USERS_DB_FILE = path.join(process.cwd(), 'users.json');
 
-//const ALLOWED_REACTIONS = ['Γëí╞Æ├æΓûæ', 'Γëí╞Æ├▒├╣', 'Γëí╞Æ├å┬¼', 'Γëí╞Æ├ª├¼', 'Γëí╞Æ├ä├¬', 'Γëí╞Æ├ä├╝', 'Γëí╞Æ├ä├⌐', 'Γëí╞Æ├ä├½', 'Γëí╞Æ├ª├à'];
-
-const ALLOWED_REACTIONS = [
-  'Γëí╞Æ├æΓûæ',
-  'Γëí╞Æ├▒├╣',
-  'Γëí╞Æ├å┬¼',
-  'Γëí╞Æ├ª├¼',
-  'Γëí╞Æ├ä├¬',
-  '╬ô┬Ñ├▒Γê⌐Γòò├à',
-  'Γëí╞Æ├ä├⌐',
-  'Γëí╞Æ├ä├½',
-  'Γëí╞Æ├ª├à',
-  '🙂'
+const ALLOWED_REACTION_IDS = [
+  'laugh',
+  'love',
+  'smile',
+  'strong',
+  'like',
+  'celebrate',
+  'heart',
+  'birthday',
+  'gift',
+  'clap'
 ];
 
 const storage = multer.diskStorage({
@@ -255,10 +253,10 @@ router.get('/media', requireLogin, (req, res) => {
 
 // REACT TO MEDIA
 router.post('/media/:id/react', requireLogin, (req, res) => {
-  const emoji = String(req.body.emoji || '').trim();
+  const reactionId = String(req.body.reactionId || '').trim();
   const username = req.session.user.username;
 
-  if (!ALLOWED_REACTIONS.includes(emoji)) {
+  if (!ALLOWED_REACTION_IDS.includes(reactionId)) {
     return res.status(400).json({ error: 'Invalid reaction' });
   }
 
@@ -271,14 +269,14 @@ router.post('/media/:id/react', requireLogin, (req, res) => {
     item.reactions = {};
   }
 
-  if (!Array.isArray(item.reactions[emoji])) {
-    item.reactions[emoji] = [];
+  if (!Array.isArray(item.reactions[reactionId])) {
+    item.reactions[reactionId] = [];
   }
 
-  if (item.reactions[emoji].includes(username)) {
-    item.reactions[emoji] = item.reactions[emoji].filter(u => u !== username);
+  if (item.reactions[reactionId].includes(username)) {
+    item.reactions[reactionId] = item.reactions[reactionId].filter(u => u !== username);
   } else {
-    item.reactions[emoji].push(username);
+    item.reactions[reactionId].push(username);
   }
 
   writeMediaDB(mediaDB);
