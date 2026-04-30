@@ -17,15 +17,15 @@ const dailyMessages = [
 ];
 
 const REACTION_CONFIG = [
-  { value: 'Γëí╞Æ├æΓûæ', display: '😂' },
-  { value: 'Γëí╞Æ├▒├╣', display: '🥰' },
-  { value: 'Γëí╞Æ├å┬¼', display: '💪' },
-  { value: 'Γëí╞Æ├ª├¼', display: '👍' },
-  { value: 'Γëí╞Æ├ä├¬', display: '🎉' },
-  { value: '╬ô┬Ñ├▒Γê⌐Γòò├à', display: '❤️' },
-  { value: 'Γëí╞Æ├ä├⌐', display: '🎂' },
-  { value: 'Γëí╞Æ├ä├½', display: '🎁' },
-  { value: 'Γëí╞Æ├ª├à', display: '👏' }
+  { value: '╬ô├½├¡Γò₧├åΓö£├ª╬ô├╗├ª', display: '😂' },
+  { value: '╬ô├½├¡Γò₧├åΓö£ΓûÆΓö£Γòú', display: '🥰' },
+  { value: '╬ô├½├¡Γò₧├åΓö£├ÑΓö¼┬╝', display: '💪' },
+  { value: '╬ô├½├¡Γò₧├åΓö£┬¬Γö£┬╝', display: '👍' },
+  { value: '╬ô├½├¡Γò₧├åΓö£├ñΓö£┬¼', display: '🎉' },
+  { value: 'Γò¼├┤Γö¼├æΓö£ΓûÆ╬ô├¬ΓîÉ╬ô├▓├▓Γö£├á', display: '❤️' },
+  { value: '╬ô├½├¡Γò₧├åΓö£├ñΓö£ΓîÉ', display: '🎂' },
+  { value: '╬ô├½├¡Γò₧├åΓö£├ñΓö£┬╜', display: '🎁' },
+  { value: '╬ô├½├¡Γò₧├åΓö£┬¬Γö£├á', display: '👏' }
 ];
 
 const MAX_UPLOAD_FILES = 25;
@@ -66,11 +66,7 @@ function escapeHtml(value) {
 
 function normalizeAlbum(album) {
   const value = String(album || '').trim();
-
-  if (!value || value === 'Fam Media') {
-    return '';
-  }
-
+  if (!value || value === 'Fam Media') return '';
   return value;
 }
 
@@ -113,9 +109,7 @@ async function populateUploadAlbums() {
     const data = await res.json();
 
     const albums = [...new Set(
-      data
-        .map(item => normalizeAlbum(item.album))
-        .filter(Boolean)
+      data.map(item => normalizeAlbum(item.album)).filter(Boolean)
     )].sort((a, b) => a.localeCompare(b));
 
     select.innerHTML = `
@@ -433,9 +427,7 @@ function populateAlbumFilter() {
   if (!albumFilter) return;
 
   const albums = [...new Set(
-    galleryMedia
-      .map(item => normalizeAlbum(item.album))
-      .filter(Boolean)
+    galleryMedia.map(item => normalizeAlbum(item.album)).filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
 
   albumFilter.innerHTML = `
@@ -512,7 +504,6 @@ async function reactToMedia(mediaId, emoji) {
   }
 }
 
-// ===== UPLOAD PAGE =====
 function initializeUpload() {
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileUpload');
@@ -658,7 +649,6 @@ function initializeUpload() {
   });
 }
 
-// ===== GALLERY PAGE =====
 async function loadGallery() {
   const container = document.getElementById('gallery');
   const photoCount = document.getElementById('photoCount');
@@ -682,7 +672,6 @@ async function loadGallery() {
   }
 }
 
-// ===== PROFILE PAGE =====
 async function loadUserUploads() {
   const container = document.getElementById('userUploads');
   const uploadStats = document.getElementById('uploadStats');
@@ -772,6 +761,11 @@ async function loadUserUploads() {
   }
 }
 
+function closeAlbumModal(modal) {
+  document.body.style.overflow = '';
+  modal.remove();
+}
+
 function openAlbumModal(albumName) {
   const items = profileMedia.filter(item => {
     const album = normalizeAlbum(item.album) || 'Misc';
@@ -783,21 +777,31 @@ function openAlbumModal(albumName) {
 
   const modal = document.createElement('div');
   modal.id = 'albumManagerModal';
-  modal.className = 'fixed inset-0 bg-black/90 z-50 overflow-y-auto';
+  modal.className = 'fixed inset-0 bg-black/95 z-50 overflow-y-auto';
 
   document.body.style.overflow = 'hidden';
 
   modal.innerHTML = `
     <div class="max-w-6xl mx-auto px-4 py-6">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h2 class="text-white text-xl font-semibold">${escapeHtml(albumName)}</h2>
-          <p class="text-white/60 text-sm">${items.length} item${items.length === 1 ? '' : 's'}</p>
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <button
+            id="backAlbumManager"
+            class="text-white text-xl px-3 py-1 rounded-lg hover:bg-white/10"
+            aria-label="Back to profile"
+          >
+            ←
+          </button>
+
+          <div>
+            <h2 class="text-white text-xl font-semibold">${escapeHtml(albumName)}</h2>
+            <p class="text-white/60 text-sm">${items.length} item${items.length === 1 ? '' : 's'}</p>
+          </div>
         </div>
 
         <button
           id="closeAlbumManager"
-          class="text-white text-3xl leading-none"
+          class="text-white text-3xl leading-none px-2"
           aria-label="Close album"
         >
           ×
@@ -807,18 +811,18 @@ function openAlbumModal(albumName) {
       ${
         items.length === 0
           ? '<p class="text-white/70">No media in this album.</p>'
-          : `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          : `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               ${items.map(item => {
                 const caption = String(item.title || '').trim();
 
                 return `
-                  <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+                  <div class="bg-white rounded-2xl overflow-hidden shadow-md">
                     <button
                       type="button"
-                      onclick='openMediaViewer(${JSON.stringify(item)})'
+                      onclick='event.stopPropagation(); openMediaViewer(${JSON.stringify(item)})'
                       class="block w-full text-left"
                     >
-                      <div class="h-64 bg-gray-100">
+                      <div class="h-72 bg-gray-100">
                         ${
                           item.type === 'image'
                             ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
@@ -827,17 +831,17 @@ function openAlbumModal(albumName) {
                       </div>
                     </button>
 
-                    <div class="p-3">
+                    <div class="p-4">
                       ${
                         caption
-                          ? `<p class="text-sm font-medium truncate">${escapeHtml(caption)}</p>`
+                          ? `<p class="text-sm font-medium mb-1">${escapeHtml(caption)}</p>`
                           : ''
                       }
-                      <p class="text-xs text-gray-500">${formatDate(item.uploadedAt)}</p>
+                      <p class="text-xs text-gray-500 mb-3">${formatDate(item.uploadedAt)}</p>
 
                       <button
                         onclick='deleteMedia(${JSON.stringify(item.id)})'
-                        class="mt-2 text-xs text-red-600"
+                        class="text-xs text-red-600 hover:underline"
                       >
                         Delete
                       </button>
@@ -852,13 +856,14 @@ function openAlbumModal(albumName) {
 
   document.body.appendChild(modal);
 
-  modal.querySelector('#closeAlbumManager').onclick = () => {
-    document.body.style.overflow = '';
-    modal.remove();
-  };
+  modal.querySelector('#closeAlbumManager').onclick = () => closeAlbumModal(modal);
+  modal.querySelector('#backAlbumManager').onclick = () => closeAlbumModal(modal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeAlbumModal(modal);
+  });
 }
 
-// ===== GLOBAL ACTIONS =====
 window.reactToMedia = reactToMedia;
 window.showReactionPicker = showReactionPicker;
 window.openMediaViewer = openMediaViewer;
@@ -910,7 +915,6 @@ window.deleteMedia = async function(mediaId) {
   }
 };
 
-// ===== HOME PAGE =====
 async function loadHomePage() {
   try {
     const res = await fetch('/api/media');
@@ -965,7 +969,6 @@ async function loadHomePage() {
   }
 }
 
-// ===== TOAST =====
 function showToast(message, type = 'success') {
   const existingToast = document.getElementById('appToast');
   if (existingToast) existingToast.remove();
