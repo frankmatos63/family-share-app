@@ -16,10 +16,23 @@ const dailyMessages = [
   "This one deserves a second look."
 ];
 
-const REACTIONS = ['🥰', '🤗', '💪', '👍', '🎈', '❤️', '🎂', '🎉', '👏'];
+const REACTION_CONFIG = [
+  { value: '≡ƒÑ░', display: '😂' },
+  { value: '≡ƒñù', display: '🥰' },
+  { value: '≡ƒÆ¬', display: '💪' },
+  { value: '≡ƒæì', display: '👍' },
+  { value: '≡ƒÄê', display: '🎉' },
+  { value: 'Γ¥ñ∩╕Å', display: '❤️' },
+  { value: '≡ƒÄé', display: '🎂' },
+  { value: '≡ƒÄë', display: '🎁' },
+  { value: '≡ƒæÅ', display: '👏' }
+];
+
 const MAX_UPLOAD_FILES = 25;
 
-let activeMediaCardId = null;
+let galleryMedia = [];
+let galleryCurrentUser = null;
+let activeAlbumFilter = '';
 
 function getDailyMessage() {
   const today = new Date().toDateString();
@@ -41,17 +54,66 @@ async function getCurrentUser() {
   }
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function normalizeAlbum(album) {
+  const value = String(album || '').trim();
+
+  if (!value || value === 'Fam Media') {
+    return '';
+  }
+
+  return value;
+}
+
+function getReactionDisplay(value) {
+  const found = REACTION_CONFIG.find(r => r.value === value || r.display === value);
+  return found ? found.display : value;
+}
+
+function getReactionValue(displayOrValue) {
+  const found = REACTION_CONFIG.find(r => r.display === displayOrValue || r.value === displayOrValue);
+  return found ? found.value : displayOrValue;
+}
+
+function getReactionUsers(item, reactionValue) {
+  const reactions = item.reactions || {};
+  const config = REACTION_CONFIG.find(r => r.value === reactionValue);
+
+  if (Array.isArray(reactions[reactionValue])) return reactions[reactionValue];
+  if (config && Array.isArray(reactions[config.display])) return reactions[config.display];
+
+  return [];
+}
+
+function getActiveReactionEntries(item) {
+  return REACTION_CONFIG
+    .map(reaction => ({
+      value: reaction.value,
+      display: reaction.display,
+      users: getReactionUsers(item, reaction.value)
+    }))
+    .filter(reaction => Array.isArray(reaction.users) && reaction.users.length > 0);
+}
+
 function showConfirm(message, confirmLabel = 'Delete') {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+    modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4';
 
     modal.innerHTML = `
-      <div class="bg-white rounded-xl p-6 w-80 text-center shadow-lg">
-        <p class="mb-6 text-sm text-[#1F2933]">${message}</p>
+      <div class="bg-white rounded-xl p-6 w-full max-w-xs text-center shadow-lg">
+        <p class="mb-6 text-sm text-[#1F2933]">${escapeHtml(message)}</p>
         <div class="flex justify-center gap-4">
-          <button id="confirmCancel" class="px-4 py-2 border rounded-lg">Cancel</button>
-          <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded-lg">${confirmLabel}</button>
+          <button id="confirmCancel" class="px-4 py-2 border border-[#E8DED2] rounded-lg">Cancel</button>
+          <button id="confirmOk" class="px-4 py-2 bg-red-500 text-white rounded-lg">${escapeHtml(confirmLabel)}</button>
         </div>
       </div>
     `;
@@ -67,46 +129,13 @@ function showConfirm(message, confirmLabel = 'Delete') {
       modal.remove();
       resolve(true);
     };
-  });
-}
 
-function showReactionsModal(reactions) {
-  const activeReactions = Object.entries(reactions || {})
-    .filter(([emoji, users]) => Array.isArray(users) && users.length > 0);
-
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4';
-
-  const content = activeReactions.length
-    ? activeReactions.map(([emoji, users]) => `
-        <div class="py-3 border-b border-[#E8DED2] last:border-b-0">
-          <div class="text-xl mb-1">${emoji}</div>
-          <div class="text-sm text-gray-600">${users.join(', ')}</div>
-        </div>
-      `).join('')
-    : '<p class="text-sm text-gray-500">No reactions yet.</p>';
-
-  modal.innerHTML = `
-    <div class="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-      <h2 class="text-lg font-semibold mb-4">Reactions</h2>
-      <div class="max-h-[60vh] overflow-y-auto">
-        ${content}
-      </div>
-      <button
-        id="closeReactionsModal"
-        class="mt-5 w-full px-4 py-2 bg-[#C76B4A] text-white rounded-lg"
-      >
-        Close
-      </button>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  modal.querySelector('#closeReactionsModal').onclick = () => modal.remove();
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        resolve(false);
+      }
+    });
   });
 }
 
@@ -114,13 +143,13 @@ function openMediaViewer(item) {
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 bg-black z-50 flex items-center justify-center';
 
-  // 🔒 Lock background scroll
   document.body.style.overflow = 'hidden';
 
   modal.innerHTML = `
     <button
       id="closeMediaViewer"
       class="absolute top-4 right-4 z-20 bg-white/15 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl"
+      aria-label="Close viewer"
     >
       ×
     </button>
@@ -128,17 +157,16 @@ function openMediaViewer(item) {
     <div class="w-full h-full overflow-auto flex items-center justify-center p-4">
       ${
         item.type === 'image'
-          ? `<img src="${item.url}" class="object-contain" style="width: auto; height: auto;">`
-          : `<video src="${item.url}" controls autoplay class="max-w-full max-h-full"></video>`
+          ? `<img src="${escapeHtml(item.url)}" class="max-w-full max-h-full object-contain">`
+          : `<video src="${escapeHtml(item.url)}" controls autoplay class="max-w-full max-h-full"></video>`
       }
     </div>
   `;
 
   document.body.appendChild(modal);
 
-  // ✅ Single clean close handler
   function closeViewer() {
-    document.body.style.overflow = ''; // 🔓 Restore scroll
+    document.body.style.overflow = '';
     modal.remove();
   }
 
@@ -149,42 +177,316 @@ function openMediaViewer(item) {
   });
 }
 
-function setActiveMediaCard(mediaId) {
-  activeMediaCardId = activeMediaCardId === mediaId ? null : mediaId;
+function openMediaViewerById(mediaId) {
+  const item = galleryMedia.find(m => String(m.id) === String(mediaId));
+  if (item) openMediaViewer(item);
+}
 
-  document.querySelectorAll('[data-media-card]').forEach(card => {
-    const isActive = card.dataset.mediaId === String(activeMediaCardId);
-    const overlay = card.querySelector('[data-media-overlay]');
-    const deleteButton = card.querySelector('[data-delete-button]');
-    const reactions = card.querySelector('[data-reactions]');
-    const overlayActions = card.querySelector('[data-overlay-actions]');
-
-    if (overlay) {
-      overlay.classList.toggle('opacity-100', isActive);
-      overlay.classList.toggle('bg-black/40', isActive);
-      overlay.classList.toggle('pointer-events-auto', isActive);
-      overlay.classList.toggle('pointer-events-none', !isActive);
-    }
-
-    if (deleteButton) {
-      deleteButton.classList.toggle('opacity-100', isActive);
-      deleteButton.classList.toggle('pointer-events-auto', isActive);
-      deleteButton.classList.toggle('pointer-events-none', !isActive);
-    }
-
-    if (reactions) {
-      reactions.classList.toggle('opacity-100', isActive);
-      reactions.classList.toggle('translate-y-0', isActive);
-      reactions.classList.toggle('scale-100', isActive);
-      reactions.classList.toggle('pointer-events-auto', isActive);
-      reactions.classList.toggle('pointer-events-none', !isActive);
-    }
-
-    if (overlayActions) {
-      overlayActions.classList.toggle('pointer-events-auto', isActive);
-      overlayActions.classList.toggle('pointer-events-none', !isActive);
+function toggleCardMenu(mediaId) {
+  document.querySelectorAll('[data-card-menu]').forEach(menu => {
+    if (menu.dataset.menuId !== String(mediaId)) {
+      menu.classList.add('hidden');
     }
   });
+
+  const menu = document.querySelector(`[data-card-menu][data-menu-id="${CSS.escape(String(mediaId))}"]`);
+  if (menu) menu.classList.toggle('hidden');
+}
+
+function showReactionPicker(mediaId) {
+  const item = galleryMedia.find(m => String(m.id) === String(mediaId));
+  if (!item) return;
+
+  const username = galleryCurrentUser?.username;
+  const activeReactions = getActiveReactionEntries(item);
+
+  const existing = document.getElementById('reactionPickerModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'reactionPickerModal';
+  modal.dataset.mediaId = String(mediaId);
+  modal.className = 'fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4';
+
+  const activeSummary = activeReactions.length
+    ? activeReactions.map(reaction => `
+        <div class="flex items-center justify-between py-2 border-b border-[#F0E7DC] last:border-b-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">${reaction.display}</span>
+            <span class="text-sm text-[#1F2933]">${reaction.users.length}</span>
+          </div>
+          <div class="text-xs text-gray-500 truncate max-w-[190px]">
+            ${escapeHtml(reaction.users.join(', '))}
+          </div>
+        </div>
+      `).join('')
+    : '<p class="text-sm text-gray-500 py-2">No reactions yet.</p>';
+
+  const pickerButtons = REACTION_CONFIG.map(reaction => {
+    const users = getReactionUsers(item, reaction.value);
+    const isActive = username && users.includes(username);
+
+    return `
+      <button
+        type="button"
+        onclick='event.stopPropagation(); reactToMedia(${JSON.stringify(item.id)}, ${JSON.stringify(reaction.value)})'
+        class="w-12 h-12 rounded-full border text-xl flex items-center justify-center transition active:scale-95 ${
+          isActive
+            ? 'bg-[#F3D6C9] text-[#8A3F2B] border-[#E8B8A3] shadow-sm'
+            : 'bg-white text-[#1F2933] border-[#E8DED2] hover:bg-[#FAF7F2]'
+        }"
+        title="${isActive ? 'Remove reaction' : 'React'}"
+      >
+        ${reaction.display}
+      </button>
+    `;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-[#1F2933]">Reactions</h2>
+        <button
+          type="button"
+          id="closeReactionPicker"
+          class="w-8 h-8 rounded-full bg-[#FAF7F2] text-[#1F2933] flex items-center justify-center"
+          aria-label="Close reactions"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="mb-4 max-h-32 overflow-y-auto">
+        ${activeSummary}
+      </div>
+
+      <div class="grid grid-cols-5 gap-3 justify-items-center">
+        ${pickerButtons}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#closeReactionPicker').onclick = () => modal.remove();
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+
+function refreshOpenReactionPicker(mediaId) {
+  const modal = document.getElementById('reactionPickerModal');
+  if (!modal) return;
+
+  const openMediaId = modal.dataset.mediaId;
+  if (String(openMediaId) === String(mediaId)) {
+    showReactionPicker(mediaId);
+  }
+}
+
+function renderReactionRows(item) {
+  return `
+    <div class="px-4 pb-4 pt-3 border-t border-[#F0E7DC]">
+      <div class="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onclick='event.stopPropagation(); showReactionPicker(${JSON.stringify(item.id)})'
+          class="text-xs font-medium text-gray-500 hover:text-[#1F2933] transition"
+        >
+          Reactions
+        </button>
+
+        <button
+          type="button"
+          onclick='event.stopPropagation(); showReactionPicker(${JSON.stringify(item.id)})'
+          class="w-8 h-8 rounded-full border border-[#E8DED2] bg-[#FAF7F2] text-[#1F2933] text-lg leading-none flex items-center justify-center hover:bg-white transition"
+          title="Add reaction"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderGalleryCard(item) {
+  const uploadedBy = item.uploadedByName || item.uploadedBy || 'Unknown';
+  const caption = String(item.title || '').trim();
+
+  return `
+    <article
+      data-media-card
+      data-media-id="${escapeHtml(item.id)}"
+      class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-[#E8DED2]"
+    >
+      <div class="relative bg-gray-100">
+        <button
+          type="button"
+          onclick='event.stopPropagation(); toggleCardMenu(${JSON.stringify(item.id)})'
+          class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/95 shadow-sm flex items-center justify-center text-xl text-[#1F2933]"
+          aria-label="Media options"
+        >
+          ⋯
+        </button>
+
+        <div
+          data-card-menu
+          data-menu-id="${escapeHtml(item.id)}"
+          class="hidden absolute top-14 right-3 z-30 bg-white rounded-xl shadow-lg border border-[#E8DED2] overflow-hidden min-w-32"
+        >
+          <button
+            type="button"
+            onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
+            class="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onclick='event.stopPropagation(); openMediaViewerById(${JSON.stringify(item.id)})'
+          class="block w-full text-left"
+          aria-label="View media larger"
+        >
+          ${
+            item.type === 'image'
+              ? `<img src="${escapeHtml(item.url)}" class="w-full h-72 object-cover">`
+              : `<video src="${escapeHtml(item.url)}" class="w-full h-72 object-cover"></video>`
+          }
+        </button>
+      </div>
+
+      <div class="p-4">
+        ${
+          caption
+            ? `<p class="text-sm font-semibold text-[#1F2933] truncate">${escapeHtml(caption)}</p>`
+            : ''
+        }
+        <div class="${caption ? 'mt-1' : ''} flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+          <span>${formatDate(item.uploadedAt)}</span>
+          <span>•</span>
+          <span>Uploaded by ${escapeHtml(uploadedBy)}</span>
+        </div>
+      </div>
+
+      ${renderReactionRows(item)}
+    </article>
+  `;
+}
+
+function getFilteredGalleryMedia() {
+  if (!activeAlbumFilter) return galleryMedia;
+
+  return galleryMedia.filter(item => normalizeAlbum(item.album) === activeAlbumFilter);
+}
+
+function renderGallery() {
+  const container = document.getElementById('gallery');
+  const photoCount = document.getElementById('photoCount');
+
+  if (!container) return;
+
+  const filteredMedia = getFilteredGalleryMedia();
+
+  if (photoCount) {
+    photoCount.textContent = activeAlbumFilter
+      ? `${filteredMedia.length} media in ${activeAlbumFilter}`
+      : `${galleryMedia.length} media`;
+  }
+
+  if (filteredMedia.length === 0) {
+    container.innerHTML = '<p class="text-center text-gray-500">No media found</p>';
+    return;
+  }
+
+  container.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
+  container.innerHTML = filteredMedia.map(item => renderGalleryCard(item)).join('');
+}
+
+function populateAlbumFilter() {
+  const albumFilter = document.getElementById('albumFilter');
+  if (!albumFilter) return;
+
+  const albums = [...new Set(
+    galleryMedia
+      .map(item => normalizeAlbum(item.album))
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+
+  albumFilter.innerHTML = `
+    <option value="">All Albums</option>
+    ${albums.map(album => `<option value="${escapeHtml(album)}">${escapeHtml(album)}</option>`).join('')}
+  `;
+
+  albumFilter.value = activeAlbumFilter;
+
+  albumFilter.onchange = () => {
+    activeAlbumFilter = albumFilter.value;
+    renderGallery();
+  };
+}
+
+function replaceGalleryCard(updatedItem) {
+  const index = galleryMedia.findIndex(item => String(item.id) === String(updatedItem.id));
+
+  if (index >= 0) {
+    galleryMedia[index] = updatedItem;
+  } else {
+    galleryMedia.push(updatedItem);
+  }
+
+  populateAlbumFilter();
+
+  const existingCard = document.querySelector(`[data-media-id="${CSS.escape(String(updatedItem.id))}"]`);
+
+  if (!existingCard) {
+    renderGallery();
+    return;
+  }
+
+  if (activeAlbumFilter && normalizeAlbum(updatedItem.album) !== activeAlbumFilter) {
+    renderGallery();
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = renderGalleryCard(updatedItem).trim();
+
+  const newCard = wrapper.firstElementChild;
+  existingCard.replaceWith(newCard);
+}
+
+async function reactToMedia(mediaId, emoji) {
+  try {
+    const reactionValue = getReactionValue(emoji);
+
+    const res = await fetch(`/api/media/${mediaId}/react`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji: reactionValue })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.item) {
+      replaceGalleryCard(data.item);
+      refreshOpenReactionPicker(mediaId);
+    } else if (res.ok && data.reactions) {
+      const existing = galleryMedia.find(item => String(item.id) === String(mediaId));
+      if (existing) {
+        existing.reactions = data.reactions;
+        replaceGalleryCard(existing);
+        refreshOpenReactionPicker(mediaId);
+      }
+    } else {
+      showToast(data.error || 'Reaction failed', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Reaction error', 'error');
+  }
 }
 
 // ===== UPLOAD PAGE =====
@@ -254,7 +556,7 @@ function initializeUpload() {
         const div = document.createElement('div');
         div.className = 'flex justify-between p-2 bg-white rounded';
         div.innerHTML = `
-          <span>${file.name}</span>
+          <span>${escapeHtml(file.name)}</span>
           <button onclick="removeFile(${index})">X</button>
         `;
         selectedFilesList.appendChild(div);
@@ -295,9 +597,12 @@ function initializeUpload() {
       formData.append('files', file);
     });
 
-    formData.append('title', document.getElementById('title').value);
-    formData.append('description', document.getElementById('description').value);
-    formData.append('album', document.getElementById('album').value);
+    const titleInput = document.getElementById('title');
+    const albumInput = document.getElementById('album');
+
+    formData.append('title', titleInput ? titleInput.value.trim() : '');
+    formData.append('description', '');
+    formData.append('album', albumInput ? albumInput.value.trim() : '');
 
     try {
       const res = await fetch('/api/upload', {
@@ -327,116 +632,18 @@ async function loadGallery() {
   const container = document.getElementById('gallery');
   const photoCount = document.getElementById('photoCount');
 
+  if (!container) return;
+
   try {
-    const currentUser = await getCurrentUser();
+    galleryCurrentUser = await getCurrentUser();
 
     const res = await fetch('/api/media');
     const data = await res.json();
 
-    const username = currentUser?.username;
+    galleryMedia = Array.isArray(data) ? data.slice().reverse() : [];
 
-    if (photoCount) photoCount.textContent = `${data.length} media`;
-
-    if (data.length === 0) {
-      container.innerHTML = '<p class="text-center text-gray-500">No media yet</p>';
-      return;
-    }
-
-    activeMediaCardId = null;
-    container.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
-
-    container.innerHTML = data.slice().reverse().map(item => {
-      const hasReactions = Object.values(item.reactions || {})
-        .some(users => Array.isArray(users) && users.length > 0);
-
-      const reactionButtons = REACTIONS.map(emoji => {
-        const users = item.reactions?.[emoji] || [];
-        const count = users.length;
-        const isActive = username && users.includes(username);
-        const namesTitle = users.length > 0 ? users.join(', ') : 'No reactions yet';
-
-        return `
-          <button
-            onclick='event.stopPropagation(); reactToMedia(${JSON.stringify(item.id)}, ${JSON.stringify(emoji)})'
-            class="text-sm px-2 py-1 rounded-full border transition-all duration-200 hover:scale-110 active:scale-95 ${
-              isActive
-                ? 'bg-[#C76B4A] text-white border-[#C76B4A] shadow-sm'
-                : 'bg-white text-[#1F2933] border-[#E8DED2] hover:bg-[#FAF7F2]'
-            }"
-            title="${namesTitle}"
-          >
-            ${emoji}${count > 0 ? ` ${count}` : ''}
-          </button>
-        `;
-      }).join('');
-
-      return `
-        <div
-          data-media-card
-          data-media-id="${item.id}"
-          onclick='setActiveMediaCard(${JSON.stringify(item.id)})'
-          class="relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group bg-white border border-[#E8DED2] cursor-pointer"
-        >
-          ${item.type === 'image'
-            ? `<img
-                src="${item.url}"
-                class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-              >`
-            : `<video
-                src="${item.url}"
-                class="w-full h-64 object-cover"
-              ></video>`
-          }
-
-          <button
-            data-delete-button
-            onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
-            class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 pointer-events-none transition z-20"
-          >
-            Delete
-          </button>
-
-          <div
-            data-media-overlay
-            class="absolute inset-0 bg-black/0 transition-all flex flex-col justify-between p-4 pointer-events-none opacity-0"
-          >
-            <div class="text-white">
-              <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
-              <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
-              <p class="text-xs text-gray-200">Uploaded by ${item.uploadedByName || item.uploadedBy || 'Unknown'}</p>
-
-              <div
-                data-overlay-actions
-                class="mt-2 flex items-center gap-4 pointer-events-none"
-              >
-                <button
-                  onclick='event.stopPropagation(); openMediaViewer(${JSON.stringify(item)})'
-                  class="text-xs underline text-white/90"
-                >
-                  View larger
-                </button>
-
-                ${hasReactions
-                  ? `<button
-                      onclick='event.stopPropagation(); showReactionsModal(${JSON.stringify(item.reactions || {})})'
-                      class="text-xs underline text-white/90"
-                    >
-                      View reactions
-                    </button>`
-                  : ''
-                }
-              </div>
-            </div>
-            <div
-              data-reactions
-              class="flex flex-wrap gap-2 opacity-0 translate-y-2 scale-95 transition-all duration-200 pointer-events-none"
-            >
-              ${reactionButtons}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    populateAlbumFilter();
+    renderGallery();
 
   } catch (e) {
     console.error(e);
@@ -444,60 +651,11 @@ async function loadGallery() {
   }
 }
 
-async function reactToMedia(mediaId, emoji) {
-  try {
-    const res = await fetch(`/api/media/${mediaId}/react`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emoji })
-    });
-
-    if (res.ok) {
-      const previousActiveId = activeMediaCardId;
-
-      await loadGallery();
-
-      // Restore same card WITHOUT toggling off
-      if (previousActiveId === mediaId) {
-        activeMediaCardId = mediaId;
-
-        const card = document.querySelector(`[data-media-id="${mediaId}"]`);
-        if (card) {
-          const overlay = card.querySelector('[data-media-overlay]');
-          const reactions = card.querySelector('[data-reactions]');
-          const deleteButton = card.querySelector('[data-delete-button]');
-          const overlayActions = card.querySelector('[data-overlay-actions]');
-
-          if (overlay) {
-            overlay.classList.add('opacity-100', 'bg-black/40', 'pointer-events-auto');
-          }
-
-          if (reactions) {
-            reactions.classList.add('opacity-100', 'translate-y-0', 'scale-100', 'pointer-events-auto');
-          }
-
-          if (deleteButton) {
-            deleteButton.classList.add('opacity-100', 'pointer-events-auto');
-          }
-
-          if (overlayActions) {
-            overlayActions.classList.add('pointer-events-auto');
-          }
-        }
-      }
-    } else {
-      const data = await res.json().catch(() => ({}));
-      showToast(data.error || 'Reaction failed', 'error');
-    }
-  } catch (err) {
-    console.error(err);
-    showToast('Reaction error', 'error');
-  }
-}
-
 window.reactToMedia = reactToMedia;
-window.showReactionsModal = showReactionsModal;
+window.showReactionPicker = showReactionPicker;
 window.openMediaViewer = openMediaViewer;
+window.openMediaViewerById = openMediaViewerById;
+window.toggleCardMenu = toggleCardMenu;
 
 window.deleteMedia = async function(mediaId) {
   const confirmed = await showConfirm('Delete this media item?', 'Delete');
@@ -511,8 +669,12 @@ window.deleteMedia = async function(mediaId) {
     if (res.ok) {
       showToast('Media deleted', 'success');
 
+      galleryMedia = galleryMedia.filter(item => String(item.id) !== String(mediaId));
+
       if (document.getElementById('gallery')) {
-        loadGallery();
+        populateAlbumFilter();
+        renderGallery();
+        return;
       }
 
       if (document.getElementById('userUploads')) {
@@ -544,7 +706,7 @@ async function loadHomePage() {
     const recentPhotos = document.getElementById('recentPhotos');
     const dailyMessage = document.getElementById('dailyMessage');
 
-    const albums = [...new Set(data.map(item => item.album || 'Fam Media'))];
+    const albums = [...new Set(data.map(item => normalizeAlbum(item.album)).filter(Boolean))];
     const recentItems = data.slice().reverse().slice(0, 3);
 
     if (totalCount) totalCount.textContent = data.length;
@@ -559,20 +721,28 @@ async function loadHomePage() {
       return;
     }
 
-    recentPhotos.innerHTML = recentItems.map(item => `
-      <a href="gallery.html" class="block bg-white rounded-lg overflow-hidden border border-[#E8DED2] shadow-sm hover:shadow-md transition">
-        <div class="h-40 overflow-hidden bg-gray-100">
-          ${item.type === 'image'
-            ? `<img src="${item.url}" class="w-full h-full object-cover">`
-            : `<video src="${item.url}" class="w-full h-full object-cover"></video>`
-          }
-        </div>
-        <div class="p-3">
-          <p class="text-sm font-medium truncate">${item.title || 'Untitled'}</p>
-          <p class="text-xs text-gray-500 mt-1">${formatDate(item.uploadedAt)}</p>
-        </div>
-      </a>
-    `).join('');
+    recentPhotos.innerHTML = recentItems.map(item => {
+      const caption = String(item.title || '').trim();
+
+      return `
+        <a href="gallery.html" class="block bg-white rounded-lg overflow-hidden border border-[#E8DED2] shadow-sm hover:shadow-md transition">
+          <div class="h-40 overflow-hidden bg-gray-100">
+            ${item.type === 'image'
+              ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
+              : `<video src="${escapeHtml(item.url)}" class="w-full h-full object-cover"></video>`
+            }
+          </div>
+          <div class="p-3">
+            ${
+              caption
+                ? `<p class="text-sm font-medium truncate">${escapeHtml(caption)}</p>`
+                : ''
+            }
+            <p class="text-xs text-gray-500 ${caption ? 'mt-1' : ''}">${formatDate(item.uploadedAt)}</p>
+          </div>
+        </a>
+      `;
+    }).join('');
 
   } catch (e) {
     console.error(e);
@@ -609,52 +779,47 @@ async function loadUserUploads() {
       return;
     }
 
-    activeMediaCardId = null;
+    container.innerHTML = userItems.map(item => {
+      const caption = String(item.title || '').trim();
 
-    container.innerHTML = userItems.map(item => `
-      <div
-        data-media-card
-        data-media-id="${item.id}"
-        onclick='setActiveMediaCard(${JSON.stringify(item.id)})'
-        class="relative bg-white rounded-2xl overflow-hidden border border-[#E8DED2] shadow-sm cursor-pointer group"
-      >
-        <div class="aspect-square overflow-hidden">
-          ${item.type === 'image'
-            ? `<img
-                src="${item.url}"
-                class="w-full h-full object-cover"
-              >`
-            : `<video
-                src="${item.url}"
-                class="w-full h-full object-cover"
-              ></video>`
-          }
-        </div>
-
-        <button
-          data-delete-button
-          onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
-          class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition"
-        >
-          Delete
-        </button>
-
+      return `
         <div
-          data-media-overlay
-          class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-end p-4 pointer-events-none opacity-0 group-hover:opacity-100"
+          data-media-card
+          data-media-id="${escapeHtml(item.id)}"
+          class="relative bg-white rounded-2xl overflow-hidden border border-[#E8DED2] shadow-sm group"
         >
-          <div class="text-white">
-            <p class="text-sm font-medium">${item.title || 'Untitled'}</p>
-            <p class="text-xs text-gray-200">${formatDate(item.uploadedAt)}</p>
+          <div class="aspect-square overflow-hidden">
+            ${item.type === 'image'
+              ? `<img
+                  src="${escapeHtml(item.url)}"
+                  class="w-full h-full object-cover"
+                >`
+              : `<video
+                  src="${escapeHtml(item.url)}"
+                  class="w-full h-full object-cover"
+                ></video>`
+            }
+          </div>
+
+          <button
+            data-delete-button
+            onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
+            class="absolute top-3 right-3 bg-white/90 text-red-600 text-xs px-3 py-1 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition"
+          >
+            Delete
+          </button>
+
+          <div class="p-3">
+            ${
+              caption
+                ? `<p class="text-sm font-medium truncate">${escapeHtml(caption)}</p>`
+                : ''
+            }
+            <p class="text-xs text-gray-500 ${caption ? '' : ''}">${formatDate(item.uploadedAt)}</p>
           </div>
         </div>
-
-        <div class="p-3">
-          <p class="text-sm font-medium truncate">${item.title || 'Untitled'}</p>
-          <p class="text-xs text-gray-500">${formatDate(item.uploadedAt)}</p>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
   } catch (e) {
     console.error(e);
@@ -686,7 +851,7 @@ function showToast(message, type = 'success') {
       <div class="w-6 h-6 ${iconColor} text-white rounded-full flex items-center justify-center text-xs font-semibold">
         ${icon}
       </div>
-      <span>${message}</span>
+      <span>${escapeHtml(message)}</span>
     </div>
   `;
 
@@ -707,6 +872,13 @@ function formatDate(dateString) {
     year: 'numeric'
   });
 }
+
+// ===== GLOBAL CLICK HANDLER =====
+document.addEventListener('click', () => {
+  document.querySelectorAll('[data-card-menu]').forEach(menu => {
+    menu.classList.add('hidden');
+  });
+});
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {

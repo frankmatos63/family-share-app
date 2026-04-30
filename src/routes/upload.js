@@ -11,9 +11,9 @@ console.log('upload.js loaded');
 const MEDIA_DB_FILE = path.join(process.cwd(), 'media-database.json');
 const USERS_DB_FILE = path.join(process.cwd(), 'users.json');
 
-//const ALLOWED_REACTIONS = ['🥰', '🤗', '💪', '👍', '🎈', '🎁', '🎂', '🎉', '👏'];
+//const ALLOWED_REACTIONS = ['≡ƒÑ░', '≡ƒñù', '≡ƒÆ¬', '≡ƒæì', '≡ƒÄê', '≡ƒÄü', '≡ƒÄé', '≡ƒÄë', '≡ƒæÅ'];
 
-const ALLOWED_REACTIONS = ['🥰', '🤗', '💪', '👍', '🎈', '❤️', '🎂', '🎉', '👏'];
+const ALLOWED_REACTIONS = ['≡ƒÑ░', '≡ƒñù', '≡ƒÆ¬', '≡ƒæì', '≡ƒÄê', 'Γ¥ñ∩╕Å', '≡ƒÄé', '≡ƒÄë', '≡ƒæÅ'];
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -214,14 +214,17 @@ router.get('/me', (req, res) => {
 router.post('/upload', requireLogin, upload.array('files', 25), (req, res) => {
   const mediaDB = readMediaDB();
 
+  const caption = String(req.body.title || '').trim();
+  const album = String(req.body.album || '').trim();
+
   req.files.forEach(file => {
     mediaDB.push({
       id: Date.now() + Math.random(),
       url: `/uploads/${file.filename}`,
       type: file.mimetype.startsWith('image/') ? 'image' : 'video',
-      title: req.body.title || file.originalname,
-      description: req.body.description || '',
-      album: req.body.album || 'Fam Media',
+      title: caption,
+      description: '',
+      album,
       uploadedAt: new Date().toISOString(),
       uploadedBy: req.session.user.username,
       uploadedByName: req.session.user.displayName,
@@ -271,7 +274,7 @@ router.post('/media/:id/react', requireLogin, (req, res) => {
 
   res.json({
     success: true,
-    reactions: item.reactions
+    item
   });
 });
 

@@ -49,7 +49,7 @@
       <p class="text-sm text-gray-500 mb-2">or select manually</p>
       <p class="text-xs text-gray-500 mb-3">Maximum 25 files per upload</p>
       <p id="uploadLimitWarning" class="hidden text-sm text-red-500 mb-4">
-      Please select 25 files or fewer.
+        Please select 25 files or fewer.
       </p>
 
       <label class="inline-block px-5 py-2.5 bg-[#C76B4A] text-white rounded-lg cursor-pointer hover:opacity-90">
@@ -67,23 +67,13 @@
     </div>
 
     <div>
-      <label class="text-sm text-gray-500 mb-2 block">Title</label>
+      <label class="text-sm text-gray-500 mb-2 block">Caption</label>
       <input
         type="text"
         id="title"
-        placeholder="Optional title"
+        placeholder="Add a short caption, optional"
         class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
       >
-    </div>
-
-    <div>
-      <label class="text-sm text-gray-500 mb-2 block">Description</label>
-      <textarea
-        id="description"
-        rows="4"
-        placeholder="Optional description"
-        class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
-      ></textarea>
     </div>
 
     <div>
@@ -92,11 +82,14 @@
         id="album"
         class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
       >
-        <option>Fam Media</option>
-        <option>Vacations</option>
-        <option>Holidays</option>
-        <option>Special Events</option>
-        <option>Kids</option>
+        <option value="">No album</option>
+        <option value="Family">Family</option>
+        <option value="Trips">Trips</option>
+        <option value="Celebrations">Celebrations</option>
+        <option value="Kids">Kids</option>
+        <option value="Pets">Pets</option>
+        <option value="Old Memories">Old Memories</option>
+        <option value="Other">Other</option>
       </select>
     </div>
 
