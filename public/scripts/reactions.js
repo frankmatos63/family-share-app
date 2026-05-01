@@ -1,3 +1,21 @@
+const reactionPopStyle = document.createElement('style');
+reactionPopStyle.textContent = `
+@keyframes reactionEmojiPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.55); }
+  65% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.reaction-emoji-pop {
+  animation: reactionEmojiPop 280ms cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+`;
+document.head.appendChild(reactionPopStyle);
+
+let isReactionModalOpen = false;
+let previousReactionBodyOverflow = '';
+
 function getReactionConfig(reactionId) {
   return REACTION_CONFIG.find(r => r.id === reactionId);
 }
@@ -18,20 +36,39 @@ function getActiveReactionEntries(item) {
     .filter(reaction => Array.isArray(reaction.users) && reaction.users.length > 0);
 }
 
+function lockReactionModalScroll() {
+  previousReactionBodyOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  isReactionModalOpen = true;
+}
+
+function unlockReactionModalScroll() {
+  document.body.style.overflow = previousReactionBodyOverflow;
+  isReactionModalOpen = false;
+}
+
+function closeReactionPickerModal() {
+  const modal = document.getElementById('reactionPickerModal');
+  if (modal) modal.remove();
+  unlockReactionModalScroll();
+}
+
 function showReactionPicker(mediaId) {
   const item = galleryMedia.find(m => String(m.id) === String(mediaId));
   if (!item) return;
 
+  const existing = document.getElementById('reactionPickerModal');
+  if (existing) closeReactionPickerModal();
+
   const username = galleryCurrentUser?.username;
   const activeReactions = getActiveReactionEntries(item);
-
-  const existing = document.getElementById('reactionPickerModal');
-  if (existing) existing.remove();
 
   const modal = document.createElement('div');
   modal.id = 'reactionPickerModal';
   modal.dataset.mediaId = String(mediaId);
   modal.className = 'fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4';
+
+  lockReactionModalScroll();
 
   const activeSummary = activeReactions.length
     ? activeReactions.map(reaction => `
@@ -54,11 +91,11 @@ function showReactionPicker(mediaId) {
     return `
       <button
         type="button"
-        onclick='event.stopPropagation(); reactToMedia(${JSON.stringify(item.id)}, ${JSON.stringify(reaction.id)})'
+        onclick='event.stopPropagation(); handleReactionClick(this, ${JSON.stringify(item.id)}, ${JSON.stringify(reaction.id)})'
         class="w-12 h-12 rounded-full border text-xl flex items-center justify-center transition active:scale-95 ${
           isActive
-            ? 'bg-[#F3D6C9] text-[#8A3F2B] border-[#E8B8A3] shadow-sm'
-            : 'bg-white text-[#1F2933] border-[#E8DED2] hover:bg-[#FAF7F2]'
+            ? 'bg-[#F3D6C9] text-[#8A3F2B] border-[#C76B4A] shadow-md scale-110 ring-2 ring-[#F3D6C9]'
+            : 'bg-white text-[#1F2933] border-[#E8DED2] hover:bg-[#FAF7F2] hover:scale-105'
         }"
         title="${escapeHtml(reaction.label)}"
       >
@@ -68,7 +105,7 @@ function showReactionPicker(mediaId) {
   }).join('');
 
   modal.innerHTML = `
-    <div class="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-xl p-5">
+    <div class="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-xl p-5 max-h-[80vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-base font-semibold text-[#1F2933]">Reactions</h2>
         <button
@@ -93,10 +130,10 @@ function showReactionPicker(mediaId) {
 
   document.body.appendChild(modal);
 
-  modal.querySelector('#closeReactionPicker').onclick = () => modal.remove();
+  modal.querySelector('#closeReactionPicker').onclick = closeReactionPickerModal;
 
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) closeReactionPickerModal();
   });
 }
 
@@ -135,6 +172,17 @@ function renderReactionRows(item) {
   `;
 }
 
+function handleReactionClick(button, mediaId, reactionId) {
+  // Force animation restart every click
+  button.style.animation = 'none';
+  button.offsetHeight; // force reflow
+  button.style.animation = null;
+
+  button.classList.add('reaction-emoji-pop');
+
+  reactToMedia(mediaId, reactionId);
+}
+
 async function reactToMedia(mediaId, reactionId) {
   try {
     const res = await fetch(`/api/media/${mediaId}/react`, {
@@ -157,5 +205,15 @@ async function reactToMedia(mediaId, reactionId) {
   }
 }
 
+document.addEventListener('touchmove', (e) => {
+  if (!isReactionModalOpen) return;
+
+  const modal = document.getElementById('reactionPickerModal');
+  if (modal && !modal.contains(e.target)) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 window.reactToMedia = reactToMedia;
 window.showReactionPicker = showReactionPicker;
+window.handleReactionClick = handleReactionClick;
