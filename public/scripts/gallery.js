@@ -17,11 +17,9 @@ function renderGalleryCard(item) {
     <article
       data-media-card
       data-media-id="${escapeHtml(item.id)}"
-      class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-[#E8DED2]"
+      class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] transition duration-200 ease-out border border-[#E8DED2]"
     >
-      <div class="relative bg-gray-100">
-        
-
+      <div class="relative bg-gray-100 overflow-hidden">
         <button
           type="button"
           onclick='event.stopPropagation(); openMediaViewerById(${JSON.stringify(item.id)})'
@@ -30,8 +28,8 @@ function renderGalleryCard(item) {
         >
           ${
             item.type === 'image'
-              ? `<img src="${escapeHtml(item.url)}" class="w-full h-56 sm:h-72 object-cover">`
-              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-56 sm:h-72 object-cover"></video>`
+              ? `<img src="${escapeHtml(item.url)}" class="w-full h-56 sm:h-72 object-cover transition duration-300 ease-out group-hover:scale-105">`
+              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-56 sm:h-72 object-cover transition duration-300 ease-out group-hover:scale-105"></video>`
           }
         </button>
       </div>
