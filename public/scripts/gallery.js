@@ -20,28 +20,7 @@ function renderGalleryCard(item) {
       class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-[#E8DED2]"
     >
       <div class="relative bg-gray-100">
-        <button
-          type="button"
-          onclick='event.stopPropagation(); toggleCardMenu(${JSON.stringify(item.id)})'
-          class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/95 shadow-sm flex items-center justify-center text-xl text-[#1F2933]"
-          aria-label="Media options"
-        >
-          ⋯
-        </button>
-
-        <div
-          data-card-menu
-          data-menu-id="${escapeHtml(item.id)}"
-          class="hidden absolute top-14 right-3 z-30 bg-white rounded-xl shadow-lg border border-[#E8DED2] overflow-hidden min-w-32"
-        >
-          <button
-            type="button"
-            onclick='event.stopPropagation(); deleteMedia(${JSON.stringify(item.id)})'
-            class="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </div>
+        
 
         <button
           type="button"
