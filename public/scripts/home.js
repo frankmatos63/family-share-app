@@ -29,10 +29,10 @@ async function loadHomePage() {
 
       return `
         <a href="gallery.html" class="block bg-white rounded-lg overflow-hidden border border-[#E8DED2] shadow-sm hover:shadow-md transition">
-          <div class="h-40 overflow-hidden bg-gray-100">
+          <div class="h-32 sm:h-40 overflow-hidden bg-gray-100">
             ${item.type === 'image'
               ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
-              : `<video src="${escapeHtml(item.url)}" class="w-full h-full object-cover"></video>`
+              : `<video src="${escapeHtml(item.url)}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>`
             }
           </div>
           <div class="p-3">
