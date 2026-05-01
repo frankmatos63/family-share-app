@@ -35,12 +35,11 @@ function renderGalleryCard(item) {
       </div>
 
       <div class="p-4">
-        ${
-          caption
-            ? `<p class="text-sm font-semibold text-[#1F2933] truncate">${escapeHtml(caption)}</p>`
-            : ''
-        }
-        <div class="${caption ? 'mt-1' : ''} flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+        <p class="text-sm font-semibold text-[#1F2933] truncate h-5">
+          ${caption ? escapeHtml(caption) : '&nbsp;'}
+        </p>
+
+        <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
           <span>${formatDate(item.uploadedAt)}</span>
           <span>•</span>
           <span>Uploaded by ${escapeHtml(uploadedBy)}</span>
