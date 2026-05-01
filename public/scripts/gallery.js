@@ -31,7 +31,7 @@ function renderGalleryCard(item) {
           ${
             item.type === 'image'
               ? `<img src="${escapeHtml(item.url)}" class="w-full h-56 sm:h-72 object-cover">`
-              : `<video src="${escapeHtml(item.url)}" muted playsinline preload="metadata" class="w-full h-56 sm:h-72 object-cover"></video>`
+              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-56 sm:h-72 object-cover"></video>`
           }
         </button>
       </div>

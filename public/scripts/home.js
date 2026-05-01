@@ -32,7 +32,7 @@ async function loadHomePage() {
           <div class="h-32 sm:h-40 overflow-hidden bg-gray-100">
             ${item.type === 'image'
               ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
-              : `<video src="${escapeHtml(item.url)}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>`
+              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>`
             }
           </div>
           <div class="p-3">

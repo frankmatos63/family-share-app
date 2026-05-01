@@ -3,6 +3,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const { execFile } = require('child_process');
 
 const router = express.Router();
 
@@ -10,6 +11,8 @@ console.log('upload.js loaded');
 
 const MEDIA_DB_FILE = path.join(process.cwd(), 'media-database.json');
 const USERS_DB_FILE = path.join(process.cwd(), 'users.json');
+const UPLOADS_DIR = path.join(process.cwd(), 'public/uploads');
+const THUMBS_DIR = path.join(process.cwd(), 'public/uploads/thumbs');
 
 const ALLOWED_REACTION_IDS = [
   'laugh',
@@ -24,9 +27,17 @@ const ALLOWED_REACTION_IDS = [
   'clap'
 ];
 
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+if (!fs.existsSync(THUMBS_DIR)) {
+  fs.mkdirSync(THUMBS_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'public/uploads/');
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + file.originalname);
@@ -74,6 +85,37 @@ function requireAdmin(req, res, next) {
     return res.status(403).json({ error: 'Admin only' });
   }
   next();
+}
+
+function safeThumbName(filename) {
+  const parsed = path.parse(filename);
+  return `${parsed.name}.jpg`;
+}
+
+function generateVideoThumbnail(inputPath, outputPath) {
+  return new Promise((resolve) => {
+    execFile(
+      'ffmpeg',
+      [
+        '-y',
+        '-ss', '00:00:01',
+        '-i', inputPath,
+        '-frames:v', '1',
+        '-q:v', '3',
+        '-vf', 'scale=640:-1',
+        outputPath
+      ],
+      (error) => {
+        if (error) {
+          console.error('Video thumbnail generation failed:', error.message);
+          resolve(false);
+          return;
+        }
+
+        resolve(fs.existsSync(outputPath));
+      }
+    );
+  });
 }
 
 // LOGIN
@@ -220,30 +262,54 @@ router.get('/me', (req, res) => {
 });
 
 // UPLOAD
-router.post('/upload', requireLogin, upload.array('files', 25), (req, res) => {
-  const mediaDB = readMediaDB();
+router.post('/upload', requireLogin, upload.array('files', 25), async (req, res) => {
+  try {
+    const mediaDB = readMediaDB();
 
-  const caption = String(req.body.title || '').trim();
-  const album = String(req.body.album || '').trim();
+    const caption = String(req.body.title || '').trim();
+    const album = String(req.body.album || '').trim();
 
-  req.files.forEach(file => {
-    mediaDB.push({
-      id: Date.now() + Math.random(),
-      url: `/uploads/${file.filename}`,
-      type: file.mimetype.startsWith('image/') ? 'image' : 'video',
-      title: caption,
-      description: '',
-      album,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: req.session.user.username,
-      uploadedByName: req.session.user.displayName,
-      comments: [],
-      reactions: {}
-    });
-  });
+    for (const file of req.files) {
+      const isImage = file.mimetype.startsWith('image/');
+      const isVideo = !isImage;
 
-  writeMediaDB(mediaDB);
-  res.json({ success: true });
+      let thumbnailUrl = '';
+
+      if (isVideo) {
+        const thumbName = safeThumbName(file.filename);
+        const inputPath = file.path;
+        const outputPath = path.join(THUMBS_DIR, thumbName);
+
+        const created = await generateVideoThumbnail(inputPath, outputPath);
+
+        if (created) {
+          thumbnailUrl = `/uploads/thumbs/${thumbName}`;
+        }
+      }
+
+      mediaDB.push({
+        id: Date.now() + Math.random(),
+        url: `/uploads/${file.filename}`,
+        type: isImage ? 'image' : 'video',
+        title: caption,
+        description: '',
+        album,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: req.session.user.username,
+        uploadedByName: req.session.user.displayName,
+        thumbnailUrl,
+        comments: [],
+        reactions: {}
+      });
+    }
+
+    writeMediaDB(mediaDB);
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error('Upload failed:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
 });
 
 // MEDIA

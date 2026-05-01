@@ -51,7 +51,7 @@ async function loadUserUploads() {
           ${
             item.type === 'image'
               ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
-              : `<video src="${escapeHtml(item.url)}" class="w-full h-full object-cover"></video>`
+              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>`
           }
         </div>
       `).join('');
@@ -245,7 +245,7 @@ function openAlbumModal(albumName) {
                         ${
                           item.type === 'image'
                             ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
-                            : `<video src="${escapeHtml(item.url)}" class="w-full h-full object-cover"></video>`
+                            : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>`
                         }
                       </div>
                     </button>
