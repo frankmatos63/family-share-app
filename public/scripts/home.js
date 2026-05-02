@@ -9,7 +9,11 @@ async function loadHomePage() {
     const recentPhotos = document.getElementById('recentPhotos');
     const dailyMessage = document.getElementById('dailyMessage');
 
-    const albums = [...new Set(data.map(item => normalizeAlbum(item.album)).filter(Boolean))];
+    const validAlbums = data
+      .map(item => normalizeAlbum(item.album))
+      .filter(album => album && album !== 'Misc' && album !== 'Quick Upload');
+
+    const albums = [...new Set(validAlbums)];
     const recentItems = data.slice().reverse().slice(0, 3);
 
     if (totalCount) totalCount.textContent = data.length;
@@ -28,20 +32,23 @@ async function loadHomePage() {
       const caption = String(item.title || '').trim();
 
       return `
-        <a href="gallery.html" class="block bg-white rounded-lg overflow-hidden border border-[#E8DED2] shadow-sm hover:shadow-md transition">
+        <a
+          href="gallery.html?media=${encodeURIComponent(item.id)}"
+          class="group block bg-white rounded-2xl overflow-hidden border border-[#E8DED2] shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] transition duration-200 ease-out"
+          aria-label="Open this media in Gallery"
+        >
           <div class="h-32 sm:h-40 overflow-hidden bg-gray-100">
             ${item.type === 'image'
-              ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover">`
-              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>`
+              ? `<img src="${escapeHtml(item.url)}" class="w-full h-full object-cover transition duration-300 ease-out group-hover:scale-105">`
+              : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-full object-cover transition duration-300 ease-out group-hover:scale-105"></video>`
             }
           </div>
+
           <div class="p-3">
-            ${
-              caption
-                ? `<p class="text-sm font-medium truncate">${escapeHtml(caption)}</p>`
-                : ''
-            }
-            <p class="text-xs text-gray-500 ${caption ? 'mt-1' : ''}">${formatDate(item.uploadedAt)}</p>
+            <p class="text-sm font-medium truncate h-5">
+              ${caption ? escapeHtml(caption) : '&nbsp;'}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">${formatDate(item.uploadedAt)}</p>
           </div>
         </a>
       `;

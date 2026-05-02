@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profile - Fam Media</title>
+  <title>My Uploads - Fam Media</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -20,7 +20,7 @@
       <a href="index.html">Home</a>
       <a href="upload.html">Upload</a>
       <a href="gallery.html">Gallery</a>
-      <a href="profile.html" class="text-[#C76B4A] font-semibold">Profile</a>
+      <a href="profile.html" class="text-[#C76B4A] font-semibold">My Uploads</a>
       <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
     </nav>
   </div>
@@ -28,11 +28,22 @@
 
 <main class="max-w-6xl mx-auto px-4 py-10">
 
-  <div class="bg-white rounded-xl border p-6 mb-8 flex items-center gap-5">
+  <div class="bg-white rounded-xl border p-6 mb-6 flex items-center gap-5">
     <div class="w-16 h-16 bg-[#C76B4A] text-white rounded-full flex items-center justify-center text-2xl">👤</div>
     <div>
       <h2 id="usernameDisplay" class="text-2xl font-semibold">Loading...</h2>
     </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="mb-8 text-center">
+    <p class="inline-flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-sm text-gray-600 bg-white border border-[#E8DED2] rounded-full px-5 py-2 shadow-sm">
+      <span>My uploads: <span id="myUploadCount" class="font-semibold text-[#1F2933]">0</span></span>
+      <span class="text-gray-300">|</span>
+      <span>Total media: <span id="totalMediaCount" class="font-semibold text-[#1F2933]">0</span></span>
+      <span class="text-gray-300">|</span>
+      <span>Albums: <span id="albumCountProfile" class="font-semibold text-[#1F2933]">0</span></span>
+    </p>
   </div>
 
   <div class="grid lg:grid-cols-3 gap-8">
@@ -116,6 +127,27 @@ async function loadUser() {
     if (data.user.role === 'admin') {
       document.getElementById('tabSettings').classList.remove('hidden');
     }
+
+    loadStats(data.user.username);
+  }
+}
+
+async function loadStats(username) {
+  try {
+    const res = await fetch('/api/media');
+    const data = await res.json();
+
+    const myUploads = data.filter(item => item.uploadedBy === username);
+    const albums = [...new Set(
+      data.map(item => normalizeAlbum(item.album)).filter(Boolean)
+    )];
+
+    document.getElementById('myUploadCount').textContent = myUploads.length;
+    document.getElementById('totalMediaCount').textContent = data.length;
+    document.getElementById('albumCountProfile').textContent = albums.length;
+
+  } catch (e) {
+    console.error(e);
   }
 }
 
@@ -141,7 +173,6 @@ async function loadUsersDropdown() {
   updateToggleButton();
 }
 
-// CREATE USER
 document.getElementById('createUserForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -192,7 +223,6 @@ function updateToggleButton() {
 
 document.getElementById('userSelect').addEventListener('change', updateToggleButton);
 
-// RESET PASSWORD
 document.getElementById('resetBtn').onclick = async () => {
   const username = document.getElementById('userSelect').value;
   const passwordInput = document.getElementById('resetPasswordInput');
@@ -211,7 +241,6 @@ document.getElementById('resetBtn').onclick = async () => {
   }
 };
 
-// ENABLE / DISABLE
 document.getElementById('toggleActiveBtn').onclick = async () => {
   const username = document.getElementById('userSelect').value;
   const user = usersCache.find(u => u.username === username);

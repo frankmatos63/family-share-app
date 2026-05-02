@@ -387,6 +387,40 @@ function openMediaViewerById(mediaId) {
   if (item) openMediaViewer(item);
 }
 
+function getMediaIdFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('media');
+}
+
+function tryOpenMediaFromURL() {
+  const mediaId = getMediaIdFromURL();
+  if (!mediaId) return;
+
+  let attempts = 0;
+
+  const interval = setInterval(() => {
+    attempts++;
+
+    if (typeof galleryMedia !== 'undefined' && Array.isArray(galleryMedia)) {
+      const item = galleryMedia.find(m => String(m.id) === String(mediaId));
+
+      if (item) {
+        openMediaViewer(item);
+        clearInterval(interval);
+        window.history.replaceState({}, document.title, 'gallery.html');
+        return;
+      }
+    }
+
+    if (attempts >= 25) {
+      clearInterval(interval);
+    }
+  }, 150);
+}
+
 window.openMediaViewer = openMediaViewer;
 window.closeMediaViewer = closeMediaViewer;
 window.openMediaViewerById = openMediaViewerById;
+window.tryOpenMediaFromURL = tryOpenMediaFromURL;
+
+document.addEventListener('DOMContentLoaded', tryOpenMediaFromURL);
