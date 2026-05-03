@@ -353,7 +353,7 @@ router.post('/media/:id/react', requireLogin, (req, res) => {
   });
 });
 
-// EDIT MEDIA CAPTION
+// EDIT MEDIA CAPTION / ALBUM
 router.put('/media/:id', requireLogin, (req, res) => {
   const mediaDB = readMediaDB();
   const item = mediaDB.find(m => m.id == req.params.id);
@@ -367,7 +367,13 @@ router.put('/media/:id', requireLogin, (req, res) => {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
-  item.title = String(req.body.title || '').trim();
+  if (req.body.title !== undefined) {
+    item.title = String(req.body.title || '').trim();
+  }
+
+  if (req.body.album !== undefined) {
+    item.album = String(req.body.album || '').trim();
+  }
 
   writeMediaDB(mediaDB);
 

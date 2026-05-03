@@ -20,11 +20,11 @@
     </a>
 
     <nav class="flex items-center gap-3 text-sm">
-      <a href="index.html" class="hover:text-[#C76B4A]">Home</a>
-      <a href="upload.html" class="hover:text-[#C76B4A]">Upload</a>
+      <a href="index.html">Home</a>
+      <a href="upload.html">Upload</a>
       <a href="gallery.html" class="text-[#C76B4A] font-semibold">Gallery</a>
-      <a href="profile.html" class="hover:text-[#C76B4A]">My Uploads</a>
-      <button onclick="logout()" class="text-red-500 hover:text-red-600 ml-2">Logout</button>
+      <a href="profile.html">My Uploads</a>
+      <button onclick="logout()" class="text-red-500 ml-2">Logout</button>
     </nav>
 
   </div>
@@ -32,15 +32,32 @@
 
 <main class="max-w-6xl mx-auto px-4 py-10">
 
+  <!-- HEADER + ACTIONS -->
   <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+
     <div>
       <h1 class="text-3xl font-semibold">All Media</h1>
       <p class="text-sm text-gray-500 mt-1" id="photoCount">Loading...</p>
     </div>
 
-    <select id="albumFilter" class="px-4 py-2.5 bg-white border border-[#E8DED2] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C76B4A]">
-      <option value="">All Albums</option>
-    </select>
+    <div class="flex gap-3">
+
+      <select
+        id="albumFilter"
+        class="px-4 py-2.5 bg-white border border-[#E8DED2] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+      >
+        <option value="">All Albums</option>
+      </select>
+
+      <button
+        id="refreshGalleryBtn"
+        class="px-4 py-2.5 bg-[#8FA996] text-white rounded-lg text-sm hover:opacity-90"
+      >
+        Refresh
+      </button>
+
+    </div>
+
   </div>
 
   <div id="gallery"></div>
@@ -55,6 +72,16 @@
 <script src="scripts/viewer.js"></script>
 <script src="scripts/reactions.js"></script>
 <script src="scripts/gallery.js"></script>
+
+<script>
+  // NEW: Refresh handler
+  document.getElementById('refreshGalleryBtn')?.addEventListener('click', () => {
+    if (typeof loadGallery === 'function') {
+      loadGallery();
+      showToast('Gallery refreshed');
+    }
+  });
+</script>
 
 </body>
 </html>

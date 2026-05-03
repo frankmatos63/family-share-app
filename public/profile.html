@@ -35,7 +35,6 @@
     </div>
   </div>
 
-  <!-- STATS -->
   <div class="mb-8 text-center">
     <p class="inline-flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-sm text-gray-600 bg-white border border-[#E8DED2] rounded-full px-5 py-2 shadow-sm">
       <span>My uploads: <span id="myUploadCount" class="font-semibold text-[#1F2933]">0</span></span>
@@ -109,18 +108,23 @@
 <script src="auth.js"></script>
 <script src="scripts/shared.js"></script>
 <script src="scripts/viewer.js"></script>
+<script src="scripts/profile-modals.js"></script>
+<script src="scripts/profile-albums.js"></script>
 <script src="scripts/profile.js"></script>
 
 <script>
 requireAuth();
 
 let usersCache = [];
+let currentProfileUsername = '';
 
 async function loadUser() {
   const res = await fetch('/api/me');
   const data = await res.json();
 
   if (data.loggedIn) {
+    currentProfileUsername = data.user.username;
+
     document.getElementById('usernameDisplay').textContent =
       data.user.displayName || data.user.username;
 
@@ -149,6 +153,10 @@ async function loadStats(username) {
   } catch (e) {
     console.error(e);
   }
+}
+
+function refreshProfileStats() {
+  if (currentProfileUsername) loadStats(currentProfileUsername);
 }
 
 async function loadUsersDropdown() {
@@ -284,6 +292,8 @@ function showTab(tab) {
 function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+window.refreshProfileStats = refreshProfileStats;
 
 loadUser();
 </script>
