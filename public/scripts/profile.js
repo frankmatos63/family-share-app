@@ -58,9 +58,9 @@ async function loadUserUploads() {
 
       return `
         <div class="bg-white border border-[#E8DED2] rounded-2xl p-6 mb-6 shadow-sm hover:shadow-md transition">
-          <div class="flex justify-between items-center mb-4">
-            <div>
-              <h2 class="text-lg font-semibold">${escapeHtml(album)}</h2>
+          <div class="flex items-start justify-between gap-4 mb-4">
+            <div class="min-w-0">
+              <h2 class="text-lg font-semibold truncate">${escapeHtml(album)}</h2>
               <p class="text-xs text-gray-500 mt-1">
                 ${items.length} item${items.length > 1 ? 's' : ''} • ${formatDate(latest.uploadedAt)}
               </p>
@@ -68,7 +68,7 @@ async function loadUserUploads() {
 
             <button
               onclick='openAlbumModal(${JSON.stringify(album)})'
-              class="px-4 py-2 bg-[#C76B4A] text-white rounded-lg text-sm hover:opacity-90"
+              class="shrink-0 px-4 py-2 bg-[#C76B4A] text-white rounded-lg text-sm hover:opacity-90"
             >
               Open
             </button>
