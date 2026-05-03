@@ -1,5 +1,18 @@
+# Node
 node_modules/
+npm-debug.log
+
+# Environment
 .env
-media-database.json
-uploads/
+
+# OS
+.DS_Store
 *:Zone.Identifier
+
+# App data (CRITICAL)
+users.json
+media-database.json
+
+# Uploads
+public/uploads/
+public/uploads/thumbs/
