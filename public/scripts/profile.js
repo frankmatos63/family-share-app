@@ -58,6 +58,7 @@ async function loadUserUploads() {
 
       return `
         <div class="bg-white border border-[#E8DED2] rounded-2xl p-6 mb-6 shadow-sm hover:shadow-md transition">
+          
           <div class="flex items-start justify-between gap-4 mb-4">
             <div class="min-w-0">
               <h2 class="text-lg font-semibold truncate">${escapeHtml(album)}</h2>
@@ -66,17 +67,40 @@ async function loadUserUploads() {
               </p>
             </div>
 
-            <button
-              onclick='openAlbumModal(${JSON.stringify(album)})'
-              class="shrink-0 px-4 py-2 bg-[#C76B4A] text-white rounded-lg text-sm hover:opacity-90"
-            >
-              Open
-            </button>
+            <div class="relative">
+              <button
+                onclick="toggleAlbumMenu(event, '${escapeHtml(album)}')"
+                class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                ⋯
+              </button>
+
+              <div
+                id="album-menu-${escapeHtml(album)}"
+                class="hidden absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg border border-gray-100 text-sm"
+              >
+                <button
+                  onclick="event.stopPropagation(); openAlbumModal('${escapeHtml(album)}')"
+                  class="block w-full text-left px-4 py-2.5 hover:bg-gray-50"
+                >
+                  View album
+                </button>
+
+                <button
+                  onclick="event.stopPropagation(); enableSelectionMode('${escapeHtml(album)}')"
+                  class="block w-full text-left px-4 py-2.5 hover:bg-gray-50"
+                >
+                  Select & move
+                </button>
+              </div>
+            </div>
+
           </div>
 
           <div class="flex gap-3">
             ${preview}
           </div>
+
         </div>
       `;
     }).join('');
@@ -86,6 +110,31 @@ async function loadUserUploads() {
     if (uploadStats) uploadStats.textContent = 'Error loading uploads';
   }
 }
+
+/* =========================
+   MENU TOGGLE
+========================= */
+
+function toggleAlbumMenu(event, album) {
+  event.stopPropagation();
+
+  const menu = document.getElementById(`album-menu-${album}`);
+  if (!menu) return;
+
+  const isOpen = !menu.classList.contains('hidden');
+
+  document.querySelectorAll('[id^="album-menu-"]').forEach(m => m.classList.add('hidden'));
+
+  if (!isOpen) {
+    menu.classList.remove('hidden');
+  }
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('[id^="album-menu-"]').forEach(m => m.classList.add('hidden'));
+});
+
+/* ========================= */
 
 window.loadUserUploads = loadUserUploads;
 

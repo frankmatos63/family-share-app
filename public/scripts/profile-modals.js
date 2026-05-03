@@ -34,6 +34,183 @@ function getProfileAlbumOptions(excludeAlbum = '') {
   return albums.filter(album => album !== excludeAlbum);
 }
 
+function openBulkMoveModal(currentAlbum) {
+  closeAllMediaMenus();
+
+  const selectedIds = Array.from(window.selectedMediaIds || []);
+
+  if (selectedIds.length === 0) {
+    showToast('No items selected', 'error');
+    return;
+  }
+
+  const existing = document.getElementById('bulkMoveModal');
+  if (existing) existing.remove();
+
+  const albums = getProfileAlbumOptions(currentAlbum);
+
+  const modal = document.createElement('div');
+  modal.id = 'bulkMoveModal';
+  modal.className = 'fixed inset-0 bg-black/50 z-[90] flex items-center justify-center px-4';
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+      <h2 class="text-lg font-semibold text-gray-900 mb-2">Move selected items</h2>
+
+      <p class="text-sm text-gray-600 mb-4">
+        Move ${selectedIds.length} selected item${selectedIds.length === 1 ? '' : 's'} from <strong>${escapeHtml(currentAlbum)}</strong> to another album.
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-[#1F2933] mb-1 block">From</label>
+          <input
+            type="text"
+            value="${escapeHtml(currentAlbum)}"
+            disabled
+            class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg bg-gray-50 text-gray-500"
+          >
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-[#1F2933] mb-1 block">To existing album</label>
+          <select
+            id="bulkMoveAlbumSelect"
+            class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+          >
+            <option value="">Misc</option>
+            ${albums.map(album => `<option value="${escapeHtml(album)}">${escapeHtml(album)}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-[#1F2933] mb-1 block">Or create new album</label>
+          <input
+            id="bulkMoveNewAlbumInput"
+            type="text"
+            placeholder="Example: Cruise 2026"
+            class="w-full px-4 py-2.5 border border-[#E8DED2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+          >
+          <p class="text-xs text-gray-400 mt-1">If filled, this will override the dropdown.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button
+          id="cancelBulkMove"
+          class="px-4 py-2 border border-[#E8DED2] rounded-lg hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="confirmBulkMove"
+          class="px-4 py-2 bg-[#C76B4A] text-white rounded-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Move
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const cancelBtn = modal.querySelector('#cancelBulkMove');
+  const moveBtn = modal.querySelector('#confirmBulkMove');
+  const albumSelect = modal.querySelector('#bulkMoveAlbumSelect');
+  const newAlbumInput = modal.querySelector('#bulkMoveNewAlbumInput');
+
+  const closeModal = () => {
+    document.removeEventListener('keydown', handleDocumentKeydown);
+    modal.remove();
+  };
+
+  const handleMove = async () => {
+    if (moveBtn.disabled) return;
+
+    const selectedAlbum = albumSelect ? albumSelect.value.trim() : '';
+    const newAlbum = newAlbumInput ? newAlbumInput.value.trim() : '';
+    const finalAlbum = newAlbum || selectedAlbum;
+
+    const finalNormalized = normalizeAlbum(finalAlbum) || 'Misc';
+    const currentNormalized = normalizeAlbum(currentAlbum) || 'Misc';
+
+    if (finalNormalized === currentNormalized) {
+      showToast('Already in that album', 'error');
+      return;
+    }
+
+    moveBtn.disabled = true;
+    moveBtn.textContent = 'Moving...';
+
+    try {
+      for (const mediaId of selectedIds) {
+        const res = await fetch(`/api/media/${mediaId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ album: finalAlbum })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.item) {
+          profileMedia = profileMedia.map(item =>
+            String(item.id) === String(mediaId) ? data.item : item
+          );
+
+          galleryMedia = galleryMedia.map(item =>
+            String(item.id) === String(mediaId) ? data.item : item
+          );
+        }
+      }
+
+      if (window.selectedMediaIds && typeof window.selectedMediaIds.clear === 'function') {
+        window.selectedMediaIds.clear();
+      }
+
+      if (typeof refreshProfileStats === 'function') {
+        refreshProfileStats();
+      }
+
+      closeModal();
+
+      const albumModal = document.getElementById('albumManagerModal');
+      if (albumModal) {
+        document.body.style.overflow = '';
+        albumModal.remove();
+      }
+
+      showToast('Selected items moved');
+
+      if (document.getElementById('userUploads')) {
+        loadUserUploads();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Bulk move error', 'error');
+      moveBtn.disabled = false;
+      moveBtn.textContent = 'Move';
+    }
+  };
+
+  function handleDocumentKeydown(e) {
+    if (e.key === 'Escape') closeModal();
+  }
+
+  cancelBtn.onclick = closeModal;
+  moveBtn.onclick = handleMove;
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', handleDocumentKeydown);
+
+  setTimeout(() => {
+    if (albumSelect) albumSelect.focus();
+  }, 0);
+}
+
 function openMoveMediaModal(mediaId, currentAlbum) {
   closeAllMediaMenus();
 
@@ -429,5 +606,6 @@ function openEditCaptionModal(mediaId, currentTitle) {
 
 window.updateCaptionInPlace = updateCaptionInPlace;
 window.openMoveMediaModal = openMoveMediaModal;
+window.openBulkMoveModal = openBulkMoveModal;
 window.openDeleteMediaModal = openDeleteMediaModal;
 window.openEditCaptionModal = openEditCaptionModal;
