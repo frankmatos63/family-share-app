@@ -307,8 +307,8 @@ function renderAlbumModal(albumName) {
                     <div class="p-4">
                       ${
                         caption
-                          ? `<p class="text-sm font-medium mb-1">${escapeHtml(caption)}</p>`
-                          : `<p class="text-sm text-gray-400 italic mb-1">No caption</p>`
+                          ? `<p data-caption-for="${escapeHtml(mediaId)}" class="text-sm font-medium mb-1">${escapeHtml(caption)}</p>`
+                          : `<p data-caption-for="${escapeHtml(mediaId)}" class="text-sm text-gray-400 italic mb-1">No caption</p>`
                       }
                       <p class="text-xs text-gray-500">${formatDate(item.uploadedAt)}</p>
                     </div>

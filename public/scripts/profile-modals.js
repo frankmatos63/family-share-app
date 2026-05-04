@@ -566,7 +566,19 @@ function openEditCaptionModal(mediaId, currentTitle) {
         String(item.id) === String(mediaId) ? data.item : item
       );
 
-      updateCaptionInPlace(mediaId, newTitle);
+      //updateCaptionInPlace(mediaId, newTitle);
+
+      const captionEl = document.querySelector(`[data-caption-for="${CSS.escape(String(mediaId))}"]`);
+
+      if (captionEl) {
+        if (newTitle) {
+          captionEl.textContent = newTitle;
+          captionEl.className = 'text-sm font-medium mb-1';
+        } else {
+          captionEl.textContent = 'No caption';
+          captionEl.className = 'text-sm text-gray-400 italic mb-1';
+        }
+      }
 
       closeModal();
       showToast('Caption updated');
