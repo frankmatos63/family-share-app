@@ -12,6 +12,8 @@ function toggleCardMenu(mediaId) {
 function renderGalleryCard(item) {
   const uploadedBy = item.uploadedByName || item.uploadedBy || 'Unknown';
   const caption = String(item.title || '').trim();
+  const album = normalizeAlbum(item.album) || '';
+  const showAlbum = album && album !== 'Misc';
 
   return `
     <article
@@ -38,6 +40,12 @@ function renderGalleryCard(item) {
         <p class="text-sm font-semibold text-[#1F2933] truncate h-5">
           ${caption ? escapeHtml(caption) : '&nbsp;'}
         </p>
+
+        ${
+          showAlbum
+            ? `<p class="text-xs text-gray-400 mt-0.5 truncate">${escapeHtml(album)}</p>`
+            : ''
+        }
 
         <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
           <span>${formatDate(item.uploadedAt)}</span>
