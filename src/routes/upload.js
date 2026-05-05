@@ -140,7 +140,8 @@ router.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       displayName: user.displayName || user.username,
-      role: user.role || 'user'
+      role: user.role || 'user',
+      visibilityGroup: user.visibilityGroup || 'core'
     };
 
     res.json({ success: true, user: req.session.user });
@@ -312,9 +313,41 @@ router.post('/upload', requireLogin, upload.array('files', 25), async (req, res)
   }
 });
 
+const VISIBILITY_RULES = {
+  core: ['core', 'team_frank_l1', 'team_frank_l2', 'team_ara'],
+  team_ara: ['core', 'team_ara'],
+  team_frank_l1: ['core', 'team_frank_l1'],
+  team_frank_l2: ['core', 'team_frank_l2']
+};
+
+
 // MEDIA
+        //router.get('/media', requireLogin, (req, res) => {
+        //  res.json(readMediaDB());
+        //});
+
 router.get('/media', requireLogin, (req, res) => {
-  res.json(readMediaDB());
+  const users = readUsersDB();
+  const mediaDB = readMediaDB();
+
+  const viewerGroup = req.session.user.visibilityGroup || 'core';
+  const allowedGroups = VISIBILITY_RULES[viewerGroup] || ['core'];
+
+  const userGroupByUsername = new Map(
+    users.map(user => [
+      String(user.username || '').toLowerCase(),
+      user.visibilityGroup || 'core'
+    ])
+  );
+
+  const visibleMedia = mediaDB.filter(item => {
+    const uploaderUsername = String(item.uploadedBy || '').toLowerCase();
+    const uploaderGroup = userGroupByUsername.get(uploaderUsername) || 'core';
+
+    return allowedGroups.includes(uploaderGroup);
+  });
+
+  res.json(visibleMedia);
 });
 
 // REACT TO MEDIA
