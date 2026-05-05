@@ -15,11 +15,15 @@ function getDisplayNameForUser(username, mediaItems) {
 
 function applyGalleryUserMode() {
   const userFilter = getGalleryUserFilter();
+  const backButton = document.getElementById('backToHub');
 
   if (!userFilter) {
     galleryVisibleMedia = galleryMedia;
+    if (backButton) backButton.classList.add('hidden');
     return;
   }
+
+  if (backButton) backButton.classList.remove('hidden');
 
   galleryVisibleMedia = galleryMedia.filter(item => String(item.uploadedBy || '') === userFilter);
 
@@ -78,14 +82,13 @@ function renderFamilyMemberTiles() {
   grid.innerHTML = members.map(member => `
     <a
       href="gallery.html?user=${encodeURIComponent(member.username)}"
-      class="inline-flex items-center gap-3 rounded-2xl border border-[#E8DED2] bg-white px-4 py-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition"
+      class="inline-flex items-center gap-3 rounded-2xl border border-[#E8DED2] bg-white px-3 py-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition"
     >
       <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#F4E7D6] text-[#7A4E2D] font-semibold">
         ${escapeHtml(member.displayName.charAt(0).toUpperCase())}
       </span>
       <span>
         <span class="block text-sm font-semibold text-[#1F2933]">${escapeHtml(member.displayName)}</span>
-        <span class="block text-xs text-gray-500">${member.count} media</span>
       </span>
     </a>
   `).join('');
@@ -127,6 +130,8 @@ function renderGalleryCard(item) {
               : `<video src="${escapeHtml(item.url)}" poster="${escapeHtml(item.thumbnailUrl || '')}" muted playsinline preload="metadata" class="w-full h-56 sm:h-72 object-cover transition duration-300 ease-out group-hover:scale-105"></video>`
           }
         </button>
+
+        ${renderReactionRows(item)}
       </div>
 
       <div class="p-4">
@@ -147,7 +152,6 @@ function renderGalleryCard(item) {
         </div>
       </div>
 
-      ${renderReactionRows(item)}
     </article>
   `;
 }

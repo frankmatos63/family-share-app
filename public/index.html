@@ -39,8 +39,8 @@
 <main class="max-w-6xl mx-auto px-4 py-10">
 
   <section class="mb-8 text-center">
-    <h2 class="text-2xl md:text-3xl font-semibold mb-4">
-      Your memories, your rules. Upload and manage your gallery anytime.
+    <h2 class="text-xl md:text-2xl font-semibold mb-3">
+      One place, many memories.
     </h2>
 
     <div class="flex justify-center gap-4">
@@ -53,18 +53,14 @@
     </div>
   </section>
 
-  <section class="mb-10 text-center">
-    <p class="inline-flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-sm text-gray-600 bg-white border border-[#E8DED2] rounded-full px-5 py-2 shadow-sm">
-      <span>Media: <span id="totalCount" class="font-semibold text-[#1F2933]">0</span></span>
-      <span class="text-gray-300">|</span>
-      <span>Albums: <span id="albumCount" class="font-semibold text-[#1F2933]">0</span></span>
-      <span class="text-gray-300">|</span>
-      <span>Recent: <span id="recentCount" class="font-semibold text-[#1F2933]">0</span></span>
-    </p>
+  <section class="hidden">
+    <span id="totalCount">0</span>
+    <span id="albumCount">0</span>
+    <span id="recentCount">0</span>
   </section>
 
   <section>
-    <h3 class="text-lg font-semibold mb-4">Recent Media</h3>
+    <h3 class="text-lg font-semibold mb-4">Most Recent</h3>
     <div id="recentPhotos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
   </section>
 
