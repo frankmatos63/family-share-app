@@ -169,11 +169,11 @@ function renderGallery() {
 
   const filteredMedia = getFilteredGalleryMedia();
 
-  if (photoCount) {
-    photoCount.textContent = activeAlbumFilter
-      ? `${filteredMedia.length} media in ${activeAlbumFilter}`
-      : `${galleryVisibleMedia.length} media`;
-  }
+//  if (photoCount) {
+//    photoCount.textContent = activeAlbumFilter
+//      ? `${filteredMedia.length} media in ${activeAlbumFilter}`
+//      : `${galleryVisibleMedia.length} media`;
+//  }
 
   if (filteredMedia.length === 0) {
     container.innerHTML = '<p class="text-center text-gray-500">No media found</p>';

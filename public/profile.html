@@ -79,7 +79,16 @@
 
           <form id="createUserForm" class="space-y-3">
             <input id="newUsername" placeholder="Username" class="w-full border p-2 rounded" required>
-            <input id="newDisplayName" placeholder="Name" class="w-full border p-2 rounded">
+
+            <input id="newDisplayName" placeholder="First Name" class="w-full border p-2 rounded" required>
+
+            <select id="newVisibilityGroup" class="w-full border p-2 rounded" required>
+              <option value="team_frank_l2">Team Frank - Level 2</option>
+              <option value="team_frank_l1">Team Frank - Level 1</option>
+              <option value="team_ara">Team Ara</option>
+              <option value="core">Core</option>
+            </select>
+
             <input id="newPassword" type="password" placeholder="Password" class="w-full border p-2 rounded" required>
 
             <button type="submit" class="w-full bg-[#C76B4A] text-white py-2 rounded">
@@ -149,8 +158,9 @@ async function loadStats(username) {
     const data = await res.json();
 
     const myUploads = data.filter(item => item.uploadedBy === username);
+
     const albums = [...new Set(
-      data.map(item => normalizeAlbum(item.album)).filter(Boolean)
+      myUploads.map(item => normalizeAlbum(item.album)).filter(Boolean)
     )];
 
     document.getElementById('myUploadCount').textContent = myUploads.length;
@@ -194,6 +204,7 @@ document.getElementById('createUserForm').addEventListener('submit', async (e) =
   const form = document.getElementById('createUserForm');
   const username = document.getElementById('newUsername').value.trim().toLowerCase();
   const displayName = document.getElementById('newDisplayName').value.trim();
+  const visibilityGroup = document.getElementById('newVisibilityGroup').value;			
   const password = document.getElementById('newPassword').value.trim();
 
   if (!username || !password) {
@@ -204,7 +215,7 @@ document.getElementById('createUserForm').addEventListener('submit', async (e) =
   const res = await fetch('/api/register', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ username, displayName, password })
+    body: JSON.stringify({ username, displayName, visibilityGroup, password })
   });
 
   if (res.ok) {

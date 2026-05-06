@@ -157,7 +157,14 @@ router.post('/register', requireLogin, requireAdmin, async (req, res) => {
   try {
     const username = String(req.body.username || '').trim().toLowerCase();
     const password = String(req.body.password || '').trim();
-    const displayName = String(req.body.displayName || '').trim() || username;
+   // const displayName = String(req.body.displayName || '').trim() || username;
+
+    const displayName = String(req.body.displayName || '').trim();
+    const visibilityGroup = String(req.body.visibilityGroup || 'team_frank_l2').trim();
+
+    if (!displayName) {
+      return res.status(400).json({ error: 'First Name is required' });
+    }
 
     const users = readUsersDB();
 
@@ -171,6 +178,7 @@ router.post('/register', requireLogin, requireAdmin, async (req, res) => {
       displayName,
       role: 'user',
       active: true,
+      visibilityGroup,
       password: await bcrypt.hash(password, 10)
     };
 

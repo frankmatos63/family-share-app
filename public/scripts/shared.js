@@ -78,7 +78,7 @@ function escapeHtml(value) {
 
 function normalizeAlbum(album) {
   const value = String(album || '').trim();
-  if (!value || value === 'Fam Media') return '';
+  if (!value || value === 'Fam Media') return 'Misc';
   return value;
 }
 
