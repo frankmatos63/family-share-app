@@ -2,13 +2,13 @@ const reactionPopStyle = document.createElement('style');
 reactionPopStyle.textContent = `
 @keyframes reactionEmojiPop {
   0% { transform: scale(1); }
-  35% { transform: scale(1.35); }
-  70% { transform: scale(0.95); }
+  35% { transform: scale(1.25); }
+  70% { transform: scale(0.96); }
   100% { transform: scale(1); }
 }
 
 .reaction-emoji-pop {
-  animation: reactionEmojiPop 240ms cubic-bezier(0.22, 0.8, 0.3, 1);
+  animation: reactionEmojiPop 220ms cubic-bezier(0.22, 0.8, 0.3, 1);
 }
 `;
 document.head.appendChild(reactionPopStyle);
@@ -20,9 +20,20 @@ function getReactionConfig(reactionId) {
   return REACTION_CONFIG.find(r => r.id === reactionId);
 }
 
+function getInteractionForCurrentUser(item) {
+  const username = galleryCurrentUser?.username;
+  const interactions = Array.isArray(item?.interactions) ? item.interactions : [];
+
+  return interactions.find(interaction => interaction.username === username) || null;
+}
+
 function getReactionUsers(item, reactionId) {
-  const reactions = item.reactions || {};
-  return Array.isArray(reactions[reactionId]) ? reactions[reactionId] : [];
+  const interactions = Array.isArray(item?.interactions) ? item.interactions : [];
+
+  return interactions
+    .filter(interaction => interaction.reactionId === reactionId)
+    .map(interaction => interaction.username)
+    .filter(Boolean);
 }
 
 function getActiveReactionEntries(item) {
@@ -60,7 +71,7 @@ function showReactionPicker(mediaId) {
   const existing = document.getElementById('reactionPickerModal');
   if (existing) closeReactionPickerModal();
 
-  const username = galleryCurrentUser?.username;
+  const existingInteraction = getInteractionForCurrentUser(item);
 
   const modal = document.createElement('div');
   modal.id = 'reactionPickerModal';
@@ -70,8 +81,7 @@ function showReactionPicker(mediaId) {
   lockReactionModalScroll();
 
   const pickerButtons = REACTION_CONFIG.map(reaction => {
-    const users = getReactionUsers(item, reaction.id);
-    const isActive = username && users.includes(username);
+    const isActive = existingInteraction?.reactionId === reaction.id;
 
     return `
       <button
@@ -83,6 +93,7 @@ function showReactionPicker(mediaId) {
             : 'bg-[#FAF7F2] hover:bg-white hover:scale-105'
         }"
         title="${escapeHtml(reaction.label)}"
+        aria-label="${escapeHtml(reaction.label)}"
       >
         ${reaction.emoji}
       </button>
@@ -91,15 +102,15 @@ function showReactionPicker(mediaId) {
 
   modal.innerHTML = `
     <div class="bg-white w-full sm:max-w-xs rounded-t-3xl sm:rounded-3xl shadow-xl px-4 py-4">
-
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-[#1F2933]">React</h2>
         <button
           type="button"
           id="closeReactionPicker"
           class="w-7 h-7 rounded-full bg-[#FAF7F2] text-[#1F2933] flex items-center justify-center hover:bg-[#F0E7DC] transition"
+          aria-label="Close"
         >
-          ×
+          &times;
         </button>
       </div>
 
@@ -107,6 +118,24 @@ function showReactionPicker(mediaId) {
         ${pickerButtons}
       </div>
 
+      <div class="mt-3">
+        <input
+          id="interactionNoteInput"
+          type="text"
+          maxlength="60"
+          value="${escapeHtml(existingInteraction?.note || '')}"
+          placeholder="Add a short note..."
+          class="w-full px-3 py-2 text-sm border border-[#E8DED2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+        >
+      </div>
+
+      <button
+        type="button"
+        id="saveInteractionNote"
+        class="mt-3 w-full px-3 py-2 text-sm font-semibold rounded-xl bg-[#C76B4A] text-white hover:opacity-90 active:scale-[0.98] transition"
+      >
+        Save
+      </button>
     </div>
   `;
 
@@ -114,8 +143,31 @@ function showReactionPicker(mediaId) {
 
   modal.querySelector('#closeReactionPicker').onclick = closeReactionPickerModal;
 
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeReactionPickerModal();
+  modal.querySelector('#saveInteractionNote').onclick = async () => {
+    const noteInput = document.getElementById('interactionNoteInput');
+    await saveMediaInteraction(
+      mediaId,
+      existingInteraction?.reactionId || '',
+      noteInput ? noteInput.value.trim() : ''
+    );
+    closeReactionPickerModal();
+  };
+
+  modal.addEventListener('mousedown', (e) => {
+    if (e.target === modal) {
+      modal.dataset.overlayMouseDown = 'true';
+    }
+  });
+
+  modal.addEventListener('mouseup', (e) => {
+    if (
+      e.target === modal &&
+      modal.dataset.overlayMouseDown === 'true'
+    ) {
+      closeReactionPickerModal();
+    }
+
+    modal.dataset.overlayMouseDown = 'false';
   });
 }
 
@@ -163,18 +215,26 @@ function handleReactionClick(button, mediaId, reactionId) {
   button.style.animation = 'none';
   button.offsetHeight;
   button.style.animation = null;
-
   button.classList.add('reaction-emoji-pop');
 
-  reactToMedia(mediaId, reactionId);
+  const item = galleryMedia.find(m => String(m.id) === String(mediaId));
+  const existingInteraction = getInteractionForCurrentUser(item);
+
+  const noteInput = document.getElementById('interactionNoteInput');
+  const note = noteInput ? noteInput.value.trim() : '';
+
+  const nextReactionId =
+    existingInteraction?.reactionId === reactionId ? '' : reactionId;
+
+  saveMediaInteraction(mediaId, nextReactionId, note);
 }
 
-async function reactToMedia(mediaId, reactionId) {
+async function saveMediaInteraction(mediaId, reactionId = '', note = '') {
   try {
-    const res = await fetch(`/api/media/${mediaId}/react`, {
+    const res = await fetch(`/api/media/${mediaId}/interact`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reactionId })
+      body: JSON.stringify({ reactionId, note })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -182,12 +242,15 @@ async function reactToMedia(mediaId, reactionId) {
     if (res.ok && data.item) {
       replaceGalleryCard(data.item);
       refreshOpenReactionPicker(mediaId);
-    } else {
-      showToast(data.error || 'Reaction failed', 'error');
+      return true;
     }
+
+    showToast(data.error || 'Interaction failed', 'error');
+    return false;
   } catch (err) {
     console.error(err);
-    showToast('Reaction error', 'error');
+    showToast('Interaction error', 'error');
+    return false;
   }
 }
 
@@ -200,6 +263,6 @@ document.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
-window.reactToMedia = reactToMedia;
+window.saveMediaInteraction = saveMediaInteraction;
 window.showReactionPicker = showReactionPicker;
 window.handleReactionClick = handleReactionClick;

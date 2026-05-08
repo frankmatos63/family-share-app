@@ -15,16 +15,11 @@ const UPLOADS_DIR = path.join(process.cwd(), 'public/uploads');
 const THUMBS_DIR = path.join(process.cwd(), 'public/uploads/thumbs');
 
 const ALLOWED_REACTION_IDS = [
-  'laugh',
-  'love',
-  'smile',
-  'strong',
-  'like',
-  'celebrate',
   'heart',
-  'birthday',
-  'gift',
-  'clap'
+  'celebrate',
+  'clap',
+  'strong',
+  'laugh'
 ];
 
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -358,12 +353,13 @@ router.get('/media', requireLogin, (req, res) => {
   res.json(visibleMedia);
 });
 
-// REACT TO MEDIA
-router.post('/media/:id/react', requireLogin, (req, res) => {
-  const reactionId = String(req.body.reactionId || '').trim();
+// SAVE / UPDATE MEDIA INTERACTION
+router.post('/media/:id/interact', requireLogin, (req, res) => {
   const username = req.session.user.username;
+  const reactionId = String(req.body.reactionId || '').trim();
+  const note = String(req.body.note || '').trim().slice(0, 60);
 
-  if (!ALLOWED_REACTION_IDS.includes(reactionId)) {
+  if (reactionId && !ALLOWED_REACTION_IDS.includes(reactionId)) {
     return res.status(400).json({ error: 'Invalid reaction' });
   }
 
@@ -372,18 +368,19 @@ router.post('/media/:id/react', requireLogin, (req, res) => {
 
   if (!item) return res.status(404).json({ error: 'Media not found' });
 
-  if (!item.reactions || typeof item.reactions !== 'object') {
-    item.reactions = {};
+  if (!Array.isArray(item.interactions)) {
+    item.interactions = [];
   }
 
-  if (!Array.isArray(item.reactions[reactionId])) {
-    item.reactions[reactionId] = [];
-  }
+  item.interactions = item.interactions.filter(interaction => interaction.username !== username);
 
-  if (item.reactions[reactionId].includes(username)) {
-    item.reactions[reactionId] = item.reactions[reactionId].filter(u => u !== username);
-  } else {
-    item.reactions[reactionId].push(username);
+  if (reactionId || note) {
+    item.interactions.push({
+      username,
+      reactionId,
+      note,
+      createdAt: new Date().toISOString()
+    });
   }
 
   writeMediaDB(mediaDB);

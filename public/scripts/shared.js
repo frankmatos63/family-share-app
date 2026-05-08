@@ -17,16 +17,11 @@ const dailyMessages = [
 ];
 
 const REACTION_CONFIG = [
-  { id: 'laugh', emoji: '😂', label: 'Funny' },
-  { id: 'love', emoji: '🥰', label: 'Love' },
-  { id: 'smile', emoji: '🙂', label: 'Smile' },
-  { id: 'strong', emoji: '💪', label: 'Strong' },
-  { id: 'like', emoji: '👍', label: 'Like' },
+  { id: 'heart', emoji: '❤️', label: 'Love' },
   { id: 'celebrate', emoji: '🎉', label: 'Celebrate' },
-  { id: 'heart', emoji: '❤️', label: 'Heart' },
-  { id: 'birthday', emoji: '🎂', label: 'Birthday' },
-  { id: 'gift', emoji: '🎁', label: 'Gift' },
-  { id: 'clap', emoji: '👏', label: 'Clap' }
+  { id: 'clap', emoji: '👏', label: 'Applause' },
+  { id: 'strong', emoji: '💪', label: 'Support' },
+  { id: 'laugh', emoji: '😂', label: 'Funny' }
 ];
 
 const MAX_UPLOAD_FILES = 25;
