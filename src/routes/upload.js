@@ -391,6 +391,63 @@ router.post('/media/:id/interact', requireLogin, (req, res) => {
   });
 });
 
+
+// ADMIN STATS
+router.get('/admin/stats', requireLogin, requireAdmin, (req, res) => {
+  const users = readUsersDB();
+  const mediaDB = readMediaDB();
+
+  const totalUsers = users.length;
+  const activeUsers = users.filter(user => user.active !== false).length;
+  const inactiveUsers = totalUsers - activeUsers;
+
+  const totalMedia = mediaDB.length;
+  const totalPhotos = mediaDB.filter(item => item.type === 'image').length;
+  const totalVideos = mediaDB.filter(item => item.type === 'video').length;
+
+  const albums = new Set(
+    mediaDB
+      .map(item => String(item.album || '').trim())
+      .filter(Boolean)
+      .map(album => album === 'Fam Media' ? 'Misc' : album)
+  );
+
+  let totalInteractions = 0;
+  let totalNotes = 0;
+  const reactionCounts = {};
+
+  mediaDB.forEach(item => {
+    const interactions = Array.isArray(item.interactions) ? item.interactions : [];
+
+    interactions.forEach(interaction => {
+      if (interaction.reactionId || String(interaction.note || '').trim()) {
+        totalInteractions += 1;
+      }
+
+      if (String(interaction.note || '').trim()) {
+        totalNotes += 1;
+      }
+
+      if (interaction.reactionId) {
+        reactionCounts[interaction.reactionId] = (reactionCounts[interaction.reactionId] || 0) + 1;
+      }
+    });
+  });
+
+  res.json({
+    totalUsers,
+    activeUsers,
+    inactiveUsers,
+    totalMedia,
+    totalPhotos,
+    totalVideos,
+    totalAlbums: albums.size,
+    totalInteractions,
+    totalNotes,
+    reactionCounts
+  });
+});
+
 // EDIT MEDIA CAPTION / ALBUM
 router.put('/media/:id', requireLogin, (req, res) => {
   const mediaDB = readMediaDB();

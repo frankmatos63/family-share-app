@@ -47,21 +47,155 @@ function getActiveReactionEntries(item) {
     .filter(reaction => Array.isArray(reaction.users) && reaction.users.length > 0);
 }
 
+function getFirstName(username) {
+  const value = String(username || '').trim();
+  if (!value) return 'Someone';
+
+  const cleaned = value
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .split('@')[0]
+    .trim();
+
+  const first = cleaned.split(/\s+/)[0] || cleaned;
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
+
+function getVisibleInteractions(item) {
+  const interactions = Array.isArray(item?.interactions) ? item.interactions : [];
+
+  return interactions
+    .filter(interaction => interaction?.reactionId || String(interaction?.note || '').trim())
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 5);
+}
+
+let previousScrollY = 0;
+let previousReactionBodyPosition = '';
+let previousReactionBodyTop = '';
+let previousReactionBodyWidth = '';
+
 function lockReactionModalScroll() {
   previousReactionBodyOverflow = document.body.style.overflow;
+  previousReactionBodyPosition = document.body.style.position;
+  previousReactionBodyTop = document.body.style.top;
+  previousReactionBodyWidth = document.body.style.width;
+
+  previousScrollY = window.scrollY || window.pageYOffset || 0;
+
   document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${previousScrollY}px`;
+  document.body.style.width = '100%';
+
   isReactionModalOpen = true;
 }
 
 function unlockReactionModalScroll() {
   document.body.style.overflow = previousReactionBodyOverflow;
+  document.body.style.position = previousReactionBodyPosition;
+  document.body.style.top = previousReactionBodyTop;
+  document.body.style.width = previousReactionBodyWidth;
+
+  window.scrollTo(0, previousScrollY);
+
   isReactionModalOpen = false;
 }
+
+
+///
+//function lockReactionModalScroll() {
+//  previousReactionBodyOverflow = document.body.style.overflow;
+//  document.body.style.overflow = 'hidden';
+//  isReactionModalOpen = true;
+//}
+
+//function unlockReactionModalScroll() {
+//  document.body.style.overflow = previousReactionBodyOverflow;
+//  isReactionModalOpen = false;
+//}
+////
 
 function closeReactionPickerModal() {
   const modal = document.getElementById('reactionPickerModal');
   if (modal) modal.remove();
   unlockReactionModalScroll();
+}
+
+function closeInteractionSummaryModal() {
+  const modal = document.getElementById('interactionSummaryModal');
+  if (modal) modal.remove();
+  unlockReactionModalScroll();
+}
+
+function showInteractionSummary(mediaId) {
+  const item = galleryMedia.find(m => String(m.id) === String(mediaId));
+  if (!item) return;
+
+  const existing = document.getElementById('interactionSummaryModal');
+  if (existing) closeInteractionSummaryModal();
+
+  const interactions = getVisibleInteractions(item);
+
+  const rows = interactions.length
+    ? interactions.map(interaction => {
+        const reaction = getReactionConfig(interaction.reactionId);
+        const note = String(interaction.note || '').trim();
+
+        return `
+          <div class="flex items-start gap-2 py-2 border-b border-[#F0E7DC] last:border-b-0">
+            <div class="w-8 h-8 rounded-full bg-[#FAF7F2] flex items-center justify-center text-sm shrink-0">
+              ${reaction ? reaction.emoji : '•'}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-[#1F2933]">
+                ${escapeHtml(getFirstName(interaction.username))}
+              </p>
+              ${
+                note
+                  ? `<p class="text-sm text-gray-600 break-words">${escapeHtml(note)}</p>`
+                  : ''
+              }
+            </div>
+          </div>
+        `;
+      }).join('')
+    : `<p class="text-sm text-gray-500 text-center py-4">No reactions or notes yet.</p>`;
+
+  const modal = document.createElement('div');
+  modal.id = 'interactionSummaryModal';
+  modal.className = 'fixed inset-0 bg-black/30 z-50 flex items-center justify-center px-4';
+
+  lockReactionModalScroll();
+
+  modal.innerHTML = `
+    <div class="bg-white w-full max-w-xs rounded-3xl shadow-xl px-4 py-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-[#1F2933]">Reactions & Notes</h2>
+        <button
+          type="button"
+          id="closeInteractionSummary"
+          class="w-7 h-7 rounded-full bg-[#FAF7F2] text-[#1F2933] flex items-center justify-center hover:bg-[#F0E7DC] transition"
+          aria-label="Close"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="max-h-[55vh] overflow-y-auto">
+        ${rows}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#closeInteractionSummary').onclick = closeInteractionSummaryModal;
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeInteractionSummaryModal();
+  });
 }
 
 function showReactionPicker(mediaId) {
@@ -125,7 +259,7 @@ function showReactionPicker(mediaId) {
           maxlength="60"
           value="${escapeHtml(existingInteraction?.note || '')}"
           placeholder="Add a short note..."
-          class="w-full px-3 py-2 text-sm border border-[#E8DED2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
+          class="w-full px-3 py-2 text-base sm:text-sm border border-[#E8DED2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C76B4A]"
         >
       </div>
 
@@ -183,16 +317,28 @@ function refreshOpenReactionPicker(mediaId) {
 
 function renderReactionRows(item) {
   const activeReactions = getActiveReactionEntries(item).slice(0, 3);
+  const visibleInteractions = getVisibleInteractions(item);
 
-  const reactionSummary = activeReactions.length
+  const reactionSummary = visibleInteractions.length
     ? `
-      <div class="absolute bottom-3 left-3 z-10 flex items-center gap-1 rounded-full bg-white/90 border border-[#E8DED2] px-2 py-1 shadow-sm">
+      <button
+        type="button"
+        onclick='event.stopPropagation(); showInteractionSummary(${JSON.stringify(item.id)})'
+        class="absolute bottom-3 left-3 z-10 flex items-center gap-1 rounded-full bg-white/90 border border-[#E8DED2] px-2 py-1 shadow-sm hover:bg-white active:scale-95 transition cursor-pointer"
+        title="View reactions and notes"
+        aria-label="View reactions and notes"
+      >
         ${activeReactions.map(reaction => `
           <span class="text-sm leading-none" title="${escapeHtml(reaction.label)}">
             ${reaction.emoji}
           </span>
         `).join('')}
-      </div>
+        ${
+          activeReactions.length === 0
+            ? `<span class="text-xs font-semibold text-[#1F2933]">Note</span>`
+            : ''
+        }
+      </button>
     `
     : '';
 
@@ -257,7 +403,10 @@ async function saveMediaInteraction(mediaId, reactionId = '', note = '') {
 document.addEventListener('touchmove', (e) => {
   if (!isReactionModalOpen) return;
 
-  const modal = document.getElementById('reactionPickerModal');
+  const modal =
+    document.getElementById('reactionPickerModal') ||
+    document.getElementById('interactionSummaryModal');
+
   if (modal && !modal.contains(e.target)) {
     e.preventDefault();
   }
@@ -266,3 +415,4 @@ document.addEventListener('touchmove', (e) => {
 window.saveMediaInteraction = saveMediaInteraction;
 window.showReactionPicker = showReactionPicker;
 window.handleReactionClick = handleReactionClick;
+window.showInteractionSummary = showInteractionSummary;
