@@ -11,8 +11,8 @@ console.log('upload.js loaded');
 
 const MEDIA_DB_FILE = path.join(process.cwd(), 'media-database.json');
 const USERS_DB_FILE = path.join(process.cwd(), 'users.json');
-const UPLOADS_DIR = path.join(process.cwd(), 'public/uploads');
-const THUMBS_DIR = path.join(process.cwd(), 'public/uploads/thumbs');
+const UPLOADS_DIR = path.resolve(process.cwd(), 'public/uploads');
+const THUMBS_DIR = path.resolve(process.cwd(), 'public/uploads/thumbs');
 
 const ALLOWED_REACTION_IDS = [
   'heart',
@@ -113,6 +113,91 @@ function generateVideoThumbnail(inputPath, outputPath) {
   });
 }
 
+const VISIBILITY_RULES = {
+  core: ['core', 'team_frank_l1', 'team_frank_l2', 'team_ara'],
+  team_ara: ['core', 'team_ara'],
+  team_frank_l1: ['core', 'team_frank_l1'],
+  team_frank_l2: ['core', 'team_frank_l2']
+};
+
+function userCanViewMediaItem(viewer, item, users) {
+  if (!viewer || !item) return false;
+
+  const viewerGroup = viewer.visibilityGroup || 'core';
+  const allowedGroups = VISIBILITY_RULES[viewerGroup] || ['core'];
+
+  const uploaderUsername = String(item.uploadedBy || '').toLowerCase();
+  const uploader = users.find(user => String(user.username || '').toLowerCase() === uploaderUsername);
+  const uploaderGroup = uploader?.visibilityGroup || 'core';
+
+  return allowedGroups.includes(uploaderGroup);
+}
+
+function getProtectedMediaItem(item) {
+  return {
+    ...item,
+    url: `/api/media-file?id=${encodeURIComponent(item.id)}`,
+    thumbnailUrl: item.thumbnailUrl
+      ? `/api/media-thumb?id=${encodeURIComponent(item.id)}`
+      : ''
+  };
+}
+
+//function getStoredMediaFilePath(item) {
+//  const filename = path.basename(String(item.url || ''));
+//  if (!filename) return '';
+//
+//  return path.resolve(path.join(UPLOADS_DIR, filename));
+//}
+
+
+//function getStoredThumbFilePath(item) {
+//  const filename = path.basename(String(item.thumbnailUrl || ''));
+//  if (!filename) return '';
+//
+//  return path.resolve(path.join(THUMBS_DIR, filename));
+//}
+
+function getStoredMediaFilePath(item) {
+  const filename = path.basename(String(item.url || ''));
+
+  if (!filename) {
+    return null;
+  }
+
+  return path.join(UPLOADS_DIR, filename);
+}
+
+function getStoredThumbFilePath(item) {
+  const filename = path.basename(String(item.thumbnailUrl || ''));
+
+  if (!filename) {
+    return null;
+  }
+
+  return path.join(THUMBS_DIR, filename);
+}
+
+//function sendProtectedFile(req, res, filePath, missingMessage) {
+//  if (!filePath || !fs.existsSync(filePath)) {
+//    return res.status(404).send(missingMessage);
+//  }
+//
+//  res.setHeader('Cache-Control', 'private, no-store');
+//  return res.sendFile(path.resolve(filePath));
+//}
+
+
+function sendProtectedFile(req, res, filePath, missingMessage) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return res.status(404).send(missingMessage);
+  }
+
+  res.setHeader('Cache-Control', 'private, no-store');
+  return fs.createReadStream(filePath).pipe(res);
+}
+
+
 // LOGIN
 router.post('/login', async (req, res) => {
   try {
@@ -152,8 +237,6 @@ router.post('/register', requireLogin, requireAdmin, async (req, res) => {
   try {
     const username = String(req.body.username || '').trim().toLowerCase();
     const password = String(req.body.password || '').trim();
-   // const displayName = String(req.body.displayName || '').trim() || username;
-
     const displayName = String(req.body.displayName || '').trim();
     const visibilityGroup = String(req.body.visibilityGroup || 'team_frank_l2').trim();
 
@@ -303,7 +386,8 @@ router.post('/upload', requireLogin, upload.array('files', 25), async (req, res)
         uploadedByName: req.session.user.displayName,
         thumbnailUrl,
         comments: [],
-        reactions: {}
+        reactions: {},
+        interactions: []
       });
     }
 
@@ -316,39 +400,46 @@ router.post('/upload', requireLogin, upload.array('files', 25), async (req, res)
   }
 });
 
-const VISIBILITY_RULES = {
-  core: ['core', 'team_frank_l1', 'team_frank_l2', 'team_ara'],
-  team_ara: ['core', 'team_ara'],
-  team_frank_l1: ['core', 'team_frank_l1'],
-  team_frank_l2: ['core', 'team_frank_l2']
-};
+// PROTECTED MEDIA FILE
+router.get('/media-file', requireLogin, (req, res) => {
+  const mediaId = String(req.query.id || '');
+  const users = readUsersDB();
+  const mediaDB = readMediaDB();
+  const item = mediaDB.find(m => String(m.id) === mediaId);
 
+  if (!item) return res.status(404).send('Media not found');
+
+  if (!userCanViewMediaItem(req.session.user, item, users)) {
+    return res.status(403).send('Forbidden');
+  }
+
+  return sendProtectedFile(req, res, getStoredMediaFilePath(item), 'File not found');
+});
+
+// PROTECTED MEDIA THUMBNAIL
+router.get('/media-thumb', requireLogin, (req, res) => {
+  const mediaId = String(req.query.id || '');
+  const users = readUsersDB();
+  const mediaDB = readMediaDB();
+  const item = mediaDB.find(m => String(m.id) === mediaId);
+
+  if (!item) return res.status(404).send('Media not found');
+
+  if (!userCanViewMediaItem(req.session.user, item, users)) {
+    return res.status(403).send('Forbidden');
+  }
+
+  return sendProtectedFile(req, res, getStoredThumbFilePath(item), 'Thumbnail not found');
+});
 
 // MEDIA
-        //router.get('/media', requireLogin, (req, res) => {
-        //  res.json(readMediaDB());
-        //});
-
 router.get('/media', requireLogin, (req, res) => {
   const users = readUsersDB();
   const mediaDB = readMediaDB();
 
-  const viewerGroup = req.session.user.visibilityGroup || 'core';
-  const allowedGroups = VISIBILITY_RULES[viewerGroup] || ['core'];
-
-  const userGroupByUsername = new Map(
-    users.map(user => [
-      String(user.username || '').toLowerCase(),
-      user.visibilityGroup || 'core'
-    ])
-  );
-
-  const visibleMedia = mediaDB.filter(item => {
-    const uploaderUsername = String(item.uploadedBy || '').toLowerCase();
-    const uploaderGroup = userGroupByUsername.get(uploaderUsername) || 'core';
-
-    return allowedGroups.includes(uploaderGroup);
-  });
+  const visibleMedia = mediaDB
+    .filter(item => userCanViewMediaItem(req.session.user, item, users))
+    .map(getProtectedMediaItem);
 
   res.json(visibleMedia);
 });
@@ -363,10 +454,15 @@ router.post('/media/:id/interact', requireLogin, (req, res) => {
     return res.status(400).json({ error: 'Invalid reaction' });
   }
 
+  const users = readUsersDB();
   const mediaDB = readMediaDB();
-  const item = mediaDB.find(m => m.id == req.params.id);
+  const item = mediaDB.find(m => String(m.id) === String(req.params.id));
 
   if (!item) return res.status(404).json({ error: 'Media not found' });
+
+  if (!userCanViewMediaItem(req.session.user, item, users)) {
+    return res.status(403).json({ error: 'Not allowed' });
+  }
 
   if (!Array.isArray(item.interactions)) {
     item.interactions = [];
@@ -387,10 +483,9 @@ router.post('/media/:id/interact', requireLogin, (req, res) => {
 
   res.json({
     success: true,
-    item
+    item: getProtectedMediaItem(item)
   });
 });
-
 
 // ADMIN STATS
 router.get('/admin/stats', requireLogin, requireAdmin, (req, res) => {
@@ -450,8 +545,9 @@ router.get('/admin/stats', requireLogin, requireAdmin, (req, res) => {
 
 // EDIT MEDIA CAPTION / ALBUM
 router.put('/media/:id', requireLogin, (req, res) => {
+  const users = readUsersDB();
   const mediaDB = readMediaDB();
-  const item = mediaDB.find(m => m.id == req.params.id);
+  const item = mediaDB.find(m => String(m.id) === String(req.params.id));
 
   if (!item) return res.status(404).json({ error: 'Media not found' });
 
@@ -459,6 +555,10 @@ router.put('/media/:id', requireLogin, (req, res) => {
   const isAdmin = req.session.user.role === 'admin';
 
   if (!isOwner && !isAdmin) {
+    return res.status(403).json({ error: 'Not allowed' });
+  }
+
+  if (!userCanViewMediaItem(req.session.user, item, users)) {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
@@ -474,14 +574,14 @@ router.put('/media/:id', requireLogin, (req, res) => {
 
   res.json({
     success: true,
-    item
+    item: getProtectedMediaItem(item)
   });
 });
 
 // DELETE
 router.delete('/media/:id', requireLogin, (req, res) => {
   const mediaDB = readMediaDB();
-  const item = mediaDB.find(m => m.id == req.params.id);
+  const item = mediaDB.find(m => String(m.id) === String(req.params.id));
 
   if (!item) return res.status(404).json({ error: 'Not found' });
 
@@ -489,7 +589,7 @@ router.delete('/media/:id', requireLogin, (req, res) => {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
-  writeMediaDB(mediaDB.filter(m => m.id != req.params.id));
+  writeMediaDB(mediaDB.filter(m => String(m.id) !== String(req.params.id)));
   res.json({ success: true });
 });
 

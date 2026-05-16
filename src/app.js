@@ -26,7 +26,11 @@ app.use(session({
 //  res.status(403).send('Forbidden');
 //});
 
-app.use('/uploads', express.static('public/uploads'));
+//app.use('/uploads', express.static('public/uploads'));
+
+app.use('/uploads', (req, res) => {
+  res.status(403).send('Forbidden');
+});
 
 // Serve static files from public folder
 app.use(express.static('public'));
