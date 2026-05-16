@@ -20,9 +20,16 @@ app.use(session({
   }
 }));
 
+// Block direct public access to uploaded media.
+// Media should eventually be served through protected API routes.
+//app.use('/uploads', (req, res) => {
+//  res.status(403).send('Forbidden');
+//});
+
+app.use('/uploads', express.static('public/uploads'));
+
 // Serve static files from public folder
 app.use(express.static('public'));
-app.use('/uploads', express.static('public/uploads'));
 
 // Mount API routes
 console.log('Mounting API routes...');
